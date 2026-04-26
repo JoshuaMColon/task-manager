@@ -1,172 +1,323 @@
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+let currentFilter = "all";
+let darkMode = localStorage.getItem("darkMode") === "true";
+
+// Apply saved theme on page load
+applyTheme();
+
+function saveTasks() {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
 // ================================================
-// STEP 1: Create our tasks array
-// An array [ ] holds a list of items.
-// Right now it&#39;s empty. Tasks get added later.
+// toggleTheme - switches between dark and light mode
 // ================================================
 
-let tasks = [];
-//          ^^ empty array - like an empty to-do list
+function toggleTheme() {
+    darkMode = !darkMode;
+    localStorage.setItem("darkMode", darkMode);
+    applyTheme();
+}
+
+function applyTheme() {
+    let body = document.body;
+    let container = document.querySelector(".container");
+    let toggleBtn = document.getElementById("theme-toggle");
+
+    if (darkMode) {
+        body.classList.add("dark");
+        body.classList.remove("light");
+        if (toggleBtn) toggleBtn.textContent = "☀️ Light";
+    } else {
+        body.classList.add("light");
+        body.classList.remove("dark");
+        if (toggleBtn) toggleBtn.textContent = "🌙 Dark";
+    }
+}
 
 // ================================================
-// STEP 2: The addTask function
-// This runs when the Add Task button is clicked
+// updateProgress - updates the progress bar
+// ================================================
+
+function updateProgress() {
+    let total = tasks.length;
+    let completed = tasks.filter(function(task) {
+        return task.completed;
+    }).length;
+
+    let fill = document.getElementById("progress-fill");
+    let label = document.getElementById("progress-label");
+
+    let percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+    fill.style.width = percent + "%";
+    label.textContent = completed + " of " + total + " completed";
+
+    // Change color based on progress
+    if (percent === 100 && total > 0) {
+        fill.style.backgroundColor = "#22c55e"; // green when all done
+    } else if (percent >= 50) {
+        fill.style.backgroundColor = "#3b82f6"; // blue at 50%+
+    } else {
+        fill.style.backgroundColor = "#6366f1"; // purple under 50%
+    }
+}
+
+// ================================================
+// addTask
 // ================================================
 
 function addTask() {
-    // Get what the user typed in the input box
     let input = document.getElementById("task-input");
-    // .value gets the text the user typed
     let taskText = input.value;
-    // GUARD CLAUSE: if the input is empty, do nothing
-    // .trim() removes extra spaces
+
     if (taskText.trim() === "") {
-     // ^ opens if condition ^ closes condition ^ opens if body
+        alert("Please enter a task first!");
+        return;
+    }
 
-     alert("Please enter a task first!");
+    let date = document.getElementById("task-date").value;
+    let priority = document.getElementById("task-priority").value;
 
-     return; // stops the function here - nothing else runs
+    tasks.push({
+        text: taskText,
+        completed: false,
+        date: date,
+        priority: priority
+    });
+
+    input.value = "";
+    document.getElementById("task-date").value = "";
+    document.getElementById("task-priority").value = "medium";
+
+    saveTasks();
+    renderTasks();
 }
-// ^ closes the if body
-// Add the new task text to our tasks array
-tasks.push(taskText);
-
-// ^ .push() adds an item to the END of an array
-// Clear the input box so it&#39;s ready for the next task
-input.value = "";
-// Re-draw the task list on screen
-renderTasks();
-// ^^ calling another function - you&#39;ll write it next
-}
-// ^ closes the addTask function body
 
 // ================================================
-// STEP 3: The renderTasks function
-// Draws the task list on screen
-// Runs every time anything changes
+// setFilter
+// ================================================
+
+function setFilter(filter) {
+    currentFilter = filter;
+
+    let buttons = document.querySelectorAll(".filter-btn");
+    buttons.forEach(function(btn) {
+        btn.classList.remove("filter-active");
+    });
+    document.getElementById("filter-" + filter).classList.add("filter-active");
+
+    renderTasks();
+}
+
+// ================================================
+// getPriorityLabel
+// ================================================
+
+function getPriorityLabel(priority) {
+    if (priority === "high") return '<span class="priority high">🔴 High</span>';
+    if (priority === "medium") return '<span class="priority medium">🟡 Medium</span>';
+    return '<span class="priority low">🟢 Low</span>';
+}
+
+// ================================================
+// formatDate
+// ================================================
+
+function formatDate(dateStr) {
+    if (!dateStr) return "";
+    let date = new Date(dateStr + "T00:00:00");
+    return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    });
+}
+
+// ================================================
+// isOverdue
+// ================================================
+
+function isOverdue(dateStr, completed) {
+    if (!dateStr || completed) return false;
+    let today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let due = new Date(dateStr + "T00:00:00");
+    return due < today;
+}
+
+// ================================================
+// editTask
+// ================================================
+
+function editTask(index) {
+    let task = tasks[index];
+    let taskEl = document.querySelector('[data-index="' + index + '"]');
+    let taskLeft = taskEl.querySelector(".task-left");
+
+    taskLeft.innerHTML =
+        '<input type="text" class="edit-input" id="edit-input-' + index + '" value="' + task.text + '">' +
+        '<div class="edit-extra-row">' +
+            '<input type="date" class="edit-date" id="edit-date-' + index + '" value="' + (task.date || "") + '">' +
+            '<select class="edit-priority" id="edit-priority-' + index + '">' +
+                '<option value="low"' + (task.priority === "low" ? " selected" : "") + '>🟢 Low</option>' +
+                '<option value="medium"' + (task.priority === "medium" ? " selected" : "") + '>🟡 Medium</option>' +
+                '<option value="high"' + (task.priority === "high" ? " selected" : "") + '>🔴 High</option>' +
+            '</select>' +
+        '</div>' +
+        '<div class="edit-actions">' +
+            '<button class="btn-save" onclick="saveEdit(' + index + ')">Save</button>' +
+            '<button class="btn-cancel" onclick="renderTasks()">Cancel</button>' +
+        '</div>';
+
+    let taskActions = taskEl.querySelector(".task-actions");
+    taskActions.style.display = "none";
+
+    let editInput = document.getElementById("edit-input-" + index);
+    editInput.focus();
+    editInput.setSelectionRange(editInput.value.length, editInput.value.length);
+
+    editInput.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") saveEdit(index);
+        if (event.key === "Escape") renderTasks();
+    });
+}
+
+// ================================================
+// saveEdit
+// ================================================
+
+function saveEdit(index) {
+    let newText = document.getElementById("edit-input-" + index).value;
+    let newDate = document.getElementById("edit-date-" + index).value;
+    let newPriority = document.getElementById("edit-priority-" + index).value;
+
+    if (newText.trim() === "") {
+        alert("Task text cannot be empty!");
+        return;
+    }
+
+    tasks[index].text = newText;
+    tasks[index].date = newDate;
+    tasks[index].priority = newPriority;
+
+    saveTasks();
+    renderTasks();
+}
+
+// ================================================
+// renderTasks
 // ================================================
 
 function renderTasks() {
+    let list = document.getElementById("task-list");
+    list.innerHTML = "";
 
-// Find the &lt;ul&gt; element in the HTML
-let list = document.getElementById("task-list");
+    let filteredTasks = tasks.filter(function(task) {
+        if (currentFilter === "active") return !task.completed;
+        if (currentFilter === "completed") return task.completed;
+        return true;
+    });
 
-// Clear whatever is in the list right now
-list.innerHTML = "";
+    let priorityOrder = { high: 0, medium: 1, low: 2 };
+    filteredTasks.sort(function(a, b) {
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
 
-// Loop through every task in the tasks array
-for (let i = 0; i < tasks.length; i++) {
-// ^ start at 0; keep going while i < total tasks; add 1 each loop
+    for (let i = 0; i < filteredTasks.length; i++) {
+        let task = filteredTasks[i];
+        let realIndex = tasks.indexOf(task);
+        let overdue = isOverdue(task.date, task.completed);
 
-// Create a new <li> element for this task
-let li = document.createElement("li");
-li.className = "task-item";
+        let li = document.createElement("li");
+        li.className = "task-item"
+            + (task.completed ? " done" : "")
+            + (overdue ? " overdue" : "");
+        li.setAttribute("data-index", realIndex);
 
-// Fill the <li> with the task text and two buttons
-li.innerHTML =
-    '<span class="task-text">' + tasks[i] + '</span>' +
-    '<div class="task-actions">' +
-       '<button class="btn-done" onclick="completeTask(' + i + ')">Done</button>' +
-         '<button class="btn-delete" onclick="deleteTask(' + i + ')">Delete</button>' +
-    '</div>';
+        let dateHtml = "";
+        if (task.date) {
+            dateHtml = '<span class="task-date' + (overdue ? " overdue-text" : "") + '">'
+                + (overdue ? "⚠️ Overdue · " : "📅 ")
+                + formatDate(task.date) + '</span>';
+        }
 
-// Add this <li> into the <ul> list
-list.appendChild(li);
+        li.innerHTML =
+            '<div class="task-left">' +
+                '<span class="task-text' + (task.completed ? " completed" : "") + '">'
+                + task.text + '</span>' +
+                '<div class="task-meta">' +
+                    getPriorityLabel(task.priority) +
+                    dateHtml +
+                '</div>' +
+            '</div>' +
+            '<div class="task-actions">' +
+                '<button class="btn-edit" onclick="editTask(' + realIndex + ')">Edit</button>' +
+                '<button class="btn-done" onclick="completeTask(' + realIndex + ')">'
+                + (task.completed ? "Undo" : "Done") + '</button>' +
+                '<button class="btn-delete" onclick="deleteTask(' + realIndex + ')">Delete</button>' +
+            '</div>';
+
+        list.appendChild(li);
+    }
+
+    if (filteredTasks.length === 0) {
+        list.innerHTML =
+            '<li style="font-size:13px;padding:12px 0;text-align:center;">'
+            + (tasks.length === 0 ? 'No tasks yet. Add one above!' : 'No ' + currentFilter + ' tasks.')
+            + '</li>';
+    }
+
+    updateCount();
+    updateProgress(); // ✅ update progress bar every render
 }
-
-// ^ closes the for loop
-
-// If no tasks exist, show a message
-if (tasks.length === 0) {
-list.innerHTML =
-    '<li style="color:#475569;font-size:13px;padding:12px 0;text-align:center;">' 
-    + 'No tasks yet. Add one above!' + '</li>';
-}
-
-// Update the task counter at the top
-updateCount();
-
-}
-// ^ closes renderTasks
 
 // ================================================
-// STEP 4: The updateCount function
-// Updates the X tasks remaining counter
+// updateCount
 // ================================================
 
 function updateCount() {
-
-let countEl = document.getElementById("task-count");
-
-countEl.textContent = tasks.length + " tasks remaining";
-
+    let countEl = document.getElementById("task-count");
+    let remaining = tasks.filter(function(task) {
+        return !task.completed;
+    }).length;
+    countEl.textContent = remaining + " tasks remaining";
 }
 
 // ================================================
-// STEP 5: The deleteTask function
-// Removes a task from the array by its index number
-// index = the position of the task (0, 1, 2...)
+// deleteTask
 // ================================================
 
 function deleteTask(index) {
-//                   ^ index comes in from the button's onclick
-
-  // .splice(start, deleteCount) removes items from an array
-  tasks.splice(index, 1);
-  //            ^     ^ delete exactly 1 item
-
-  // Re-draw the list with the task gone
-  renderTasks();
-
+    tasks.splice(index, 1);
+    saveTasks();
+    renderTasks();
 }
 
 // ================================================
-// STEP 6: The completeTask function
-// Toggles a task between done and not-done
+// completeTask
 // ================================================
 
 function completeTask(index) {
-    
-  // Get all task-item elements on the page
-  let taskItems = document.querySelectorAll(".task-item");
-
-  // Find the specific task item at this index
-  let taskEl = taskItems[index];
-
-  // Find the text span inside this task item
-  let textEl = textEl.querySelector(".task-text");
-
-  // Toggle: if already complete -> remove it. If not -> add it.
-  if (textEl.classList.contains("completed")) {
-    // ^ if the task is currently marked complete...
-
-    textEl.classList.remove("completed");
-    taskEl.classList.remove("done");
-
-  } else {
-    // ^ otherwise (task is NOT complete)...
-
-    textEl.classList.add("completed");
-    taskEl.classList.add("done");
-  }
-
+    tasks[index].completed = !tasks[index].completed;
+    saveTasks();
+    renderTasks();
 }
 
 // ================================================
-// STEP 7: Listen for the Enter key
-// addEventListener watches for an event on an element
+// Enter key listener
 // ================================================
 
 let inputEl = document.getElementById("task-input");
 
 inputEl.addEventListener("keydown", function(event) {
-    //        ^ watch for keydown ^ function runs when any key is pressed
-
     if (event.key === "Enter") {
-        //       ^ was it specifically the Enter key?
-
-        addTask();  // run the same addTask function as the button
-
+        addTask();
     }
-
 });
-// ^ closes the function ^ closes addEventListener( ) ^ semicolon
+
+// ================================================
+// Render on page load
+// ================================================
+
+renderTasks();

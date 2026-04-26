@@ -6,8 +6,157 @@
     box-sizing: border-box;
 }
 
-body {
+/* ===================== */
+/* --- Dark mode --- */
+/* ===================== */
+body.dark {
     background-color: #1a1a2e;
+    color: #e2e8f0;
+}
+
+body.dark .container {
+    background-color: #16213e;
+}
+
+body.dark input[type="text"],
+body.dark input[type="date"],
+body.dark select,
+body.dark .edit-input,
+body.dark .edit-date,
+body.dark .edit-priority {
+    background-color: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+body.dark .task-item {
+    background-color: #0f172a;
+}
+
+body.dark .filter-btn {
+    background-color: #0f172a;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+body.dark .filter-btn:hover {
+    background-color: #1e293b;
+    color: #e2e8f0;
+}
+
+body.dark #task-count {
+    color: #94a3b8;
+}
+
+body.dark .progress-bar {
+    background-color: #0f172a;
+}
+
+body.dark .progress-label {
+    color: #94a3b8;
+}
+
+body.dark #task-list li {
+    color: #475569;
+}
+
+body.dark h1 {
+    color: #e2e8f0;
+}
+
+body.dark .task-text {
+    color: #e2e8f0;
+}
+
+body.dark #theme-toggle {
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+body.dark #theme-toggle:hover {
+    background-color: #1e293b;
+    color: #e2e8f0;
+}
+
+body.dark .edit-input,
+body.dark .edit-date,
+body.dark .edit-priority {
+    background-color: #1e293b;
+}
+
+/* ===================== */
+/* --- Light mode --- */
+/* ===================== */
+body.light {
+    background-color: #f1f5f9;
+    color: #1e293b;
+}
+
+body.light .container {
+    background-color: #ffffff;
+}
+
+body.light input[type="text"],
+body.light input[type="date"],
+body.light select,
+body.light .edit-input,
+body.light .edit-date,
+body.light .edit-priority {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+    color: #1e293b;
+}
+
+body.light .task-item {
+    background-color: #f8fafc;
+}
+
+body.light .filter-btn {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border-color: #cbd5e1;
+}
+
+body.light .filter-btn:hover {
+    background-color: #e2e8f0;
+    color: #1e293b;
+}
+
+body.light #task-count {
+    color: #64748b;
+}
+
+body.light .progress-bar {
+    background-color: #e2e8f0;
+}
+
+body.light .progress-label {
+    color: #64748b;
+}
+
+body.light .task-text {
+    color: #1e293b;
+}
+
+body.light #task-list li {
+    color: #64748b;
+}
+
+body.light h1 {
+    color: #1e293b;
+}
+
+body.light #theme-toggle {
+    border-color: #cbd5e1;
+    color: #64748b;
+}
+
+body.light #theme-toggle:hover {
+    background-color: #e2e8f0;
+    color: #1e293b;
+}
+
+body {
     font-family: Arial, sans-serif;
     display: flex;
     justify-content: center;
@@ -16,7 +165,6 @@ body {
 }
 
 .container {
-    background-color: #16213e;
     border-radius: 12px;
     padding: 32px;
     width: 100%;
@@ -24,16 +172,52 @@ body {
     height: fit-content;
 }
 
+
 h1 {
     color: #e2e8f0;
     font-size: 22px;
     margin-bottom: 6px;
 }
 
+#theme-toggle {
+    background-color: transparent;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
 #task-count {
     color: #94a3b8;
     font-size: 13px;
     margin-bottom: 20px;
+}
+
+/* --- Progress bar --- */
+.progress-container {
+    margin-bottom: 20px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background-color: #6366f1;
+    transition: width 0.4s ease, background-color 0.4s ease;
+}
+
+.progress-label {
+    font-size: 11px;
 }
 
 /* --- Input row --- */
@@ -70,6 +254,79 @@ button {
 button:hover {
     background-color: #2563eb;
 }
+
+/* --- Extra row (date + priority) --- */
+.extra-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+input[type="date"] {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background-color: #0f172a;
+    color: #e2e8f0;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background-color: #0f172a;
+    color: #e2e8f0;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+button {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #2563eb;
+}
+
+/* --- Filter row --- */
+.filter-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.filter-btn {
+    flex: 1;
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    background-color: #0f172a;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    cursor: pointer;
+}
+
+.filter-btn:hover {
+    background-color: #1e293b;
+    color: #e2e8f0;
+}
+
+/* ✅ Active filter button style */
+.filter-active {
+    background-color: #3b82f6 !important;
+    color: white !important;
+    border-color: #3b82f6 !important;
+}
+
 
 /* --- Task List --- */
 #task-list {
@@ -118,6 +375,229 @@ button:hover {
     cursor: pointer;
 }
 
+/* --- Task meta (priority + date) --- */
+.task-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.priority {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+.priority.high {
+    background-color: #450a0a;
+    color: #fca5a5;
+}
+
+.priority.medium {
+    background-color: #422006;
+    color: #fcd34d;
+}
+
+.priority.low {
+    background-color: #052e16;
+    color: #86efac;
+}
+
+.task-date {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.overdue-text {
+    color: #f87171 !important;
+}
+
+.task-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.btn-done {
+    background-color: #166534;
+    color: #86efac;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.btn-delete {
+    background-color: #7f1d1d;
+    color: #fca5a5;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* --- Edit mode --- */
+.edit-input {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #3b82f6;
+    background-color: #1e293b;
+    color: #e2e8f0;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.edit-extra-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.edit-date {
+    flex: 1;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background-color: #1e293b;
+    color: #e2e8f0;
+    font-size: 12px;
+}
+
+.edit-priority {
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background-color: #1e293b;
+    color: #e2e8f0;
+    font-size: 12px;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-edit {
+    background-color: #1e40af;
+    color: #bfdbfe;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.btn-save {
+    background-color: #166534;
+    color: #86efac;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    background-color: #374151;
+    color: #9ca3af;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* ===================== */
+/* --- Responsive --- */
+/* ===================== */
+@media (max-width: 480px) {
+
+    body {
+        padding: 16px 12px;
+    }
+
+    .container {
+        padding: 20px 16px;
+    }
+
+    h1 {
+        font-size: 18px;
+    }
+
+    /* Stack input and button vertically on mobile */
+    .input-row {
+        flex-direction: column;
+    }
+
+    .input-row button {
+        width: 100%;
+    }
+
+    /* Stack date and priority vertically on mobile */
+    .extra-row {
+        flex-direction: column;
+    }
+
+    input[type="date"] {
+        width: 100%;
+    }
+
+    select {
+        width: 100%;
+    }
+
+    /* Make task actions wrap on small screens */
+    .task-item {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .task-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    /* Make filter buttons smaller text */
+    .filter-btn {
+        font-size: 11px;
+        padding: 6px 6px;
+    }
+
+    /* Edit mode responsive */
+    .edit-extra-row {
+        flex-direction: column;
+    }
+
+    .edit-date {
+        width: 100%;
+    }
+
+    .edit-priority {
+        width: 100%;
+    }
+
+    .edit-actions {
+        width: 100%;
+    }
+
+    .btn-save,
+    .btn-cancel {
+        flex: 1;
+        text-align: center;
+    }
+
+    /* Theme toggle smaller on mobile */
+    #theme-toggle {
+        font-size: 11px;
+        padding: 5px 8px;
+    }
+}
+
 /* --- Completed Task Style --- */
 .completed {
     text-decoration: line-through;
@@ -126,4 +606,88 @@ button:hover {
 
 .task-item.done {
     border-left: 3px solid #166534;
+}
+
+/* --- Responsive --- */
+@media (max-width: 480px) {
+
+    body {
+        padding: 16px 12px;
+    }
+
+    .container {
+        padding: 20px 16px;
+    }
+
+    h1 {
+        font-size: 18px;
+    }
+
+    /* Stack input and button vertically on mobile */
+    .input-row {
+        flex-direction: column;
+    }
+
+    .input-row button {
+        width: 100%;
+    }
+
+    /* Stack date and priority vertically on mobile */
+    .extra-row {
+        flex-direction: column;
+    }
+
+    input[type="date"] {
+        width: 100%;
+    }
+
+    select {
+        width: 100%;
+    }
+
+    /* Make task actions wrap on small screens */
+    .task-item {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .task-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    /* Make filter buttons smaller text */
+    .filter-btn {
+        font-size: 11px;
+        padding: 6px 6px;
+    }
+
+    /* Edit mode responsive */
+    .edit-extra-row {
+        flex-direction: column;
+    }
+
+    .edit-date {
+        width: 100%;
+    }
+
+    .edit-priority {
+        width: 100%;
+    }
+
+    .edit-actions {
+        width: 100%;
+    }
+
+    .btn-save,
+    .btn-cancel {
+        flex: 1;
+        text-align: center;
+    }
+
+    /* Theme toggle smaller on mobile */
+    #theme-toggle {
+        font-size: 11px;
+        padding: 5px 8px;
+    }
 }

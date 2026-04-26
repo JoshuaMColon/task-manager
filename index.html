@@ -8,23 +8,55 @@
 </head>
 
 <body>
-    <div class=""container">
+    <div class="container">
+
+        <!-- ✅ Dark mode toggle -->
+        <div class="top-row">
         <h1>Task Manager</h1>
+        <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
 
-        <p id=""task-count">0 tasks remaining</p>
+        <p id="task-count">0 tasks remaining</p>
 
-        <div class=""input-row">
+        <!-- ✅ Progress bar -->
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <span class="progress-label" id="progress-label">0 of 0 completed</span>
+        </div>
+
+        <div class="input-row">
             <input
                 type="text" 
                 id="task-input" 
                 placeholder="Enter a new task..."
             >
 
-            <button onClick="addTask()">Add Task</button>
+            <button onclick="addTask()">Add Task</button>
         </div>
 
-        <ul id=""task-list">
-            <!-- Tasks will appear here -added by JavaScript -->
+        <!-- ✅ Due date and priority inputs -->
+        <div class="extra-row">
+            <input
+                type="date"
+                id="task-date"
+            >
+            <select id="task-priority">
+                <option value="low">🟢 Low</option>
+                <option value="medium" selected>🟡 Medium</option>
+                <option value="high">🔴 High</option>
+            </select>
+        </div>
+
+        <!-- ✅ Filter buttons -->
+        <div class="filter-row">
+            <button id="filter-all" class="filter-btn filter-active" onclick="setFilter('all')">All</button>
+            <button id="filter-active" class="filter-btn" onclick="setFilter('active')">Active</button>
+            <button id="filter-completed" class="filter-btn" onclick="setFilter('completed')">Completed</button>
+        </div>
+
+        <ul id="task-list">
+            <!-- Tasks will appear here - added by JavaScript -->
         </ul>
     </div>
 
