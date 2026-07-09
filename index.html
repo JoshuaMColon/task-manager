@@ -1,66 +1,111 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Task Manager</title>
-    <link rel="stylesheet" href="style.css">
-</head>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-<body>
-    <div class="container">
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div>
+          <div class="brand">Lumen</div>
+          <nav class="nav-links">
+            <a class="nav-link active" href="#">Home</a>
+            <a class="nav-link" href="#">Today</a>
+            <a class="nav-link" href="#">Planner</a>
+            <a class="nav-link" href="#">Habits</a>
+          </nav>
+        </div>
 
-        <!-- ✅ Dark mode toggle -->
-        <div class="top-row">
-        <h1>Task Manager</h1>
         <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+      </aside>
 
-        <p id="task-count">0 tasks remaining</p>
+      <main class="container">
+        <header class="top-row">
+          <div class="header-copy">
+            <p class="eyebrow">Life Planner</p>
+            <h1>Plan your day with clarity.</h1>
+            <p class="hero-copy">
+              A calm place to capture what matters and move through your week
+              with intention.
+            </p>
+          </div>
+        </header>
 
-        <!-- ✅ Progress bar -->
-        <div class="progress-container">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
+        <section class="planner-grid">
+          <div class="summary-card">
+            <div class="summary-text">
+              <p id="task-count">0 tasks remaining</p>
+              <p class="summary-subtitle">Small steps create big progress.</p>
             </div>
-            <span class="progress-label" id="progress-label">0 of 0 completed</span>
-        </div>
 
-        <div class="input-row">
-            <input
-                type="text" 
-                id="task-input" 
-                placeholder="Enter a new task..."
-            >
+            <div class="progress-container">
+              <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
+              <span class="progress-label" id="progress-label"
+                >0 of 0 completed</span
+              >
+            </div>
+          </div>
 
-            <button onclick="addTask()">Add Task</button>
-        </div>
+          <div class="planner-card">
+            <div class="input-row">
+              <input
+                type="text"
+                id="task-input"
+                placeholder="What deserves your attention today?"
+              />
 
-        <!-- ✅ Due date and priority inputs -->
-        <div class="extra-row">
-            <input
-                type="date"
-                id="task-date"
-            >
-            <select id="task-priority">
+              <button onclick="addTask()">Add</button>
+            </div>
+
+            <div class="extra-row">
+              <input type="date" id="task-date" />
+              <select id="task-priority">
                 <option value="low">🟢 Low</option>
                 <option value="medium" selected>🟡 Medium</option>
                 <option value="high">🔴 High</option>
-            </select>
-        </div>
+              </select>
+            </div>
+          </div>
+        </section>
 
-        <!-- ✅ Filter buttons -->
-        <div class="filter-row">
-            <button id="filter-all" class="filter-btn filter-active" onclick="setFilter('all')">All</button>
-            <button id="filter-active" class="filter-btn" onclick="setFilter('active')">Active</button>
-            <button id="filter-completed" class="filter-btn" onclick="setFilter('completed')">Completed</button>
-        </div>
+        <section class="task-section">
+          <div class="filter-row">
+            <button
+              id="filter-all"
+              class="filter-btn filter-active"
+              onclick="setFilter('all')"
+            >
+              All
+            </button>
+            <button
+              id="filter-active"
+              class="filter-btn"
+              onclick="setFilter('active')"
+            >
+              Active
+            </button>
+            <button
+              id="filter-completed"
+              class="filter-btn"
+              onclick="setFilter('completed')"
+            >
+              Completed
+            </button>
+          </div>
 
-        <ul id="task-list">
+          <ul id="task-list">
             <!-- Tasks will appear here - added by JavaScript -->
-        </ul>
+          </ul>
+        </section>
+      </main>
     </div>
 
     <script src="script.js"></script>
-    
-</body>
+  </body>
 </html>
