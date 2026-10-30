@@ -18,7 +18,7 @@
       // Apply the saved skin before first paint (no flash).
       try {
         var s = JSON.parse(localStorage.getItem('xplan:skin') || 'null')
-        if (s && /^(forge|bloom|slate)$/.test(s.skin)) document.documentElement.dataset.skin = s.skin
+        if (s && /^(forge|alloy|bloom|slate)$/.test(s.skin)) document.documentElement.dataset.skin = s.skin
       } catch (e) {}
     </script>
   </head>

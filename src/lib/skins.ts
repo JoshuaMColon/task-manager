@@ -10,13 +10,23 @@ export interface Skin {
   dark: boolean
   /** Card surface colour, used to keep accent-coloured text readable. */
   surface: string
+  /** Page background, used for the browser theme colour. */
+  bg: string
+  /** The same skin in the opposite light/dark mode, if it has one. */
+  pair?: SkinId
 }
 
 export const SKINS: Skin[] = [
-  { id: 'forge', name: 'Forge', tagline: 'Gunmetal steel, molten orange', accent: '#ff7a1a', dark: true, surface: '#1f242b' },
-  { id: 'bloom', name: 'Bloom', tagline: 'Soft rose and violet', accent: '#c2367f', dark: false, surface: '#ffffff' },
-  { id: 'slate', name: 'Slate', tagline: 'Clean, neutral, calm', accent: '#3b63d1', dark: false, surface: '#ffffff' },
+  { id: 'forge', name: 'Forge', tagline: 'Gunmetal steel, molten orange', accent: '#ff7a1a', dark: true, surface: '#1f242b', bg: '#14171b', pair: 'alloy' },
+  { id: 'alloy', name: 'Alloy', tagline: 'Forge in daylight: brushed steel, molten orange', accent: '#ff7a1a', dark: false, surface: '#f5f7f9', bg: '#dde2e8', pair: 'forge' },
+  { id: 'bloom', name: 'Bloom', tagline: 'Soft rose and violet', accent: '#c2367f', dark: false, surface: '#ffffff', bg: '#fbf3f7' },
+  { id: 'slate', name: 'Slate', tagline: 'Clean, neutral, calm', accent: '#3b63d1', dark: false, surface: '#ffffff', bg: '#f3f4f6' },
 ]
+
+/** Skins that share a look but differ in light/dark mode (Forge <-> Alloy). */
+export function pairedSkin(id: SkinId): SkinId | undefined {
+  return SKIN_BY_ID[id]?.pair
+}
 
 export const SKIN_BY_ID = Object.fromEntries(SKINS.map((s) => [s.id, s])) as Record<SkinId, Skin>
 
@@ -81,7 +91,7 @@ export function applySkin(skin: SkinId, accent: string | null) {
   root.style.setProperty('--accent-ink', accentInk(a, s.surface, s.dark))
   root.style.colorScheme = s.dark ? 'dark' : 'light'
   const meta = document.querySelector('meta[name="theme-color"]')
-  meta?.setAttribute('content', s.dark ? '#14171b' : s.id === 'bloom' ? '#fbf3f7' : '#f3f4f6')
+  meta?.setAttribute('content', s.bg)
   try {
     localStorage.setItem('xplan:skin', JSON.stringify({ skin: s.id, accent }))
   } catch {

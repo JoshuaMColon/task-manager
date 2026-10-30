@@ -1,4 +1,4 @@
-import { Folder, Keyboard, LogOut, Menu, Palette, Search } from 'lucide-react'
+import { Folder, Keyboard, LogOut, Menu, Moon, Palette, Search, Sun } from 'lucide-react'
 import { NAV } from '../lib/nav'
 import { useState } from 'react'
 import { PATH_OF } from '../hooks/useRoute'
@@ -24,6 +24,17 @@ interface NavProps {
   onCustomize(): void
   onHelp(): void
   onSignOut?(): void
+  /** Present when the current skin has a light/dark twin (e.g. Forge <-> Alloy). */
+  modeToggle?: { dark: boolean; label: string; run(): void }
+}
+
+function ModeToggle({ t, className }: { t: NonNullable<NavProps['modeToggle']>; className: string }) {
+  const Icon = t.dark ? Sun : Moon
+  return (
+    <button type="button" onClick={t.run} className={className} aria-label={t.label} title={t.label} data-mode-toggle>
+      <Icon className="size-4" />
+    </button>
+  )
 }
 
 function NavLink({ active, href, go, children, badge, danger }: { active: boolean; href: string; go(p: string): void; children: React.ReactNode; badge?: number; danger?: boolean }) {
@@ -91,6 +102,7 @@ export function Sidebar(p: NavProps) {
         <button type="button" onClick={p.onCustomize} className="btn flex-1 justify-start px-2 text-muted hover:bg-surface-2 hover:text-ink">
           <Palette className="size-4" aria-hidden="true" /> Customize
         </button>
+        {p.modeToggle && <ModeToggle t={p.modeToggle} className="rounded p-2 text-muted hover:bg-surface-2 hover:text-ink" />}
         <button type="button" onClick={p.onHelp} className="rounded p-2 text-muted hover:bg-surface-2 hover:text-ink" aria-label="Keyboard shortcuts">
           <Keyboard className="size-4" />
         </button>
@@ -124,6 +136,7 @@ export function MobileNav(p: NavProps) {
               <XpBar stats={p.stats} label={false} />
             </div>
           </div>
+          {p.modeToggle && <ModeToggle t={p.modeToggle} className="rounded p-2 text-muted [&>svg]:size-5" />}
           <button type="button" onClick={p.onPalette} className="rounded p-2 text-muted" aria-label="Search">
             <Search className="size-5" />
           </button>

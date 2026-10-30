@@ -20,7 +20,7 @@ import { ACHIEVEMENT_BY_CODE } from './lib/achievements'
 import { cloudBackend, localBackend, type Backend, type Snapshot } from './lib/backend'
 import { addDays, todayISO } from './lib/dates'
 import { parseQuickAdd, type ParsedQuest } from './lib/parse'
-import { applySkin, SKINS } from './lib/skins'
+import { applySkin, pairedSkin, SKIN_BY_ID, SKINS } from './lib/skins'
 import { supabase } from './lib/supabase'
 import type { Priority, Task } from './lib/types'
 import { groupsFor, isOverdue, isToday, type Group, type ViewId } from './lib/views'
@@ -276,6 +276,12 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
     return () => window.removeEventListener('keydown', onKey)
   }, [flat, selected, go, complete, reopen, snooze, remove, actions])
 
+  const twin = pairedSkin(profile.skin)
+  const modeToggle = useMemo(() => {
+    if (!twin) return undefined
+    const dark = SKIN_BY_ID[profile.skin].dark
+    return { dark, label: `Switch to ${dark ? 'light' : 'dark'} mode (${SKIN_BY_ID[twin].name})`, run: () => actions.updateProfile({ skin: twin }) }
+  }, [twin, profile.skin, actions])
   const commands = useMemo<Command[]>(() => {
     const nav = NAV.map((n) => ({ id: `go-${n.view}`, group: 'Go to', label: n.label, icon: <n.icon className="size-4" />, hint: `G ${n.key}`, run: () => go(PATH_OF[n.view]) }))
     const proj = projects.map((p) => ({ id: `p-${p.id}`, group: 'Projects', label: p.name, keywords: 'project', run: () => go(`/project/${p.id}`) }))
@@ -287,8 +293,9 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
       ...nav,
       ...proj,
       ...skins,
+      ...(modeToggle ? [{ id: 'mode', group: 'Skins', label: modeToggle.label, keywords: 'theme light dark mode toggle', icon: <Palette className="size-4" />, run: modeToggle.run }] : []),
     ]
-  }, [projects, go, actions])
+  }, [projects, go, actions, modeToggle])
 
   const meta = TITLES[view]
   const Icon = meta.icon
@@ -407,9 +414,9 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
   return (
     <div className="flex min-h-dvh">
       <a href="#main" className="sr-only z-50 rounded bg-accent px-3 py-2 text-on-accent focus:not-sr-only focus:fixed focus:left-2 focus:top-2">Skip to content</a>
-      <Sidebar view={view} projectId={projectId} counts={counts} projects={projects} projectCounts={projectCounts} profile={profile} stats={stats} mode={mode} guest={guest} go={go} onPalette={() => setPalette(true)} onCustomize={() => setCustom(true)} onHelp={() => setHelp(true)} onSignOut={onSignOut} />
+      <Sidebar view={view} projectId={projectId} counts={counts} projects={projects} projectCounts={projectCounts} profile={profile} stats={stats} mode={mode} guest={guest} go={go} onPalette={() => setPalette(true)} onCustomize={() => setCustom(true)} onHelp={() => setHelp(true)} onSignOut={onSignOut} modeToggle={modeToggle} />
       <div className="min-w-0 flex-1">
-        <MobileNav view={view} projectId={projectId} counts={counts} projects={projects} projectCounts={projectCounts} profile={profile} stats={stats} mode={mode} guest={guest} go={go} onPalette={() => setPalette(true)} onCustomize={() => setCustom(true)} onHelp={() => setHelp(true)} onSignOut={onSignOut} />
+        <MobileNav view={view} projectId={projectId} counts={counts} projects={projects} projectCounts={projectCounts} profile={profile} stats={stats} mode={mode} guest={guest} go={go} onPalette={() => setPalette(true)} onCustomize={() => setCustom(true)} onHelp={() => setHelp(true)} onSignOut={onSignOut} modeToggle={modeToggle} />
         <main id="main" className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 sm:px-6 md:pb-10 md:pt-8 lg:px-10">
           <header className="mb-6 flex items-center gap-3">
             <span className="hex hidden size-10 place-items-center bg-surface-2 text-accent-ink sm:grid" aria-hidden="true">

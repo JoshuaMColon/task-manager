@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react'
 import { useState } from 'react'
-import { ACCENTS, AVATARS, SKINS } from '../lib/skins'
+import { ACCENTS, AVATARS, SKIN_BY_ID, SKINS } from '../lib/skins'
 import type { Profile } from '../lib/types'
 import { Avatar } from './Avatar'
 import { Modal } from './Modal'
@@ -39,13 +39,14 @@ function CustomizeBody({ profile, onChange }: { profile: Profile; onChange(p: Pa
       </fieldset>
       <fieldset>
         <legend className="mb-2 text-xs font-bold text-muted">Skin</legend>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2">
           {SKINS.map((s) => (
             <label key={s.id} data-skin-preview={s.id} className={`relative cursor-pointer overflow-hidden rounded-skin-sm border-2 p-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent ${profile.skin === s.id ? 'border-accent' : 'border-line hover:border-line-strong'}`}>
               <input type="radio" name="skin" className="sr-only" checked={profile.skin === s.id} onChange={() => onChange({ skin: s.id })} />
               <SkinSwatch id={s.id} accent={s.accent} />
               <span className="mt-2 block font-bold">{s.name}</span>
               <span className="block text-xs text-muted">{s.tagline}</span>
+              <span className="mt-1 block text-[11px] font-bold text-muted">{s.dark ? 'Dark' : 'Light'}{s.pair ? ` · pairs with ${SKIN_BY_ID[s.pair].name}` : ''}</span>
               {profile.skin === s.id && <Check className="absolute right-2 top-2 size-4 text-accent-ink" aria-hidden="true" />}
             </label>
           ))}
@@ -82,6 +83,7 @@ function AvatarChoice({ id, label, profile, onChange }: { id: string; label: str
 
 const SWATCH: Record<string, [string, string, string]> = {
   forge: ['#14171b', '#262c34', '#3a424d'],
+  alloy: ['#d4dae1', '#f5f7f9', '#9aa5b1'],
   bloom: ['#fbeaf3', '#ffffff', '#e9ddfb'],
   slate: ['#eef0f3', '#ffffff', '#dde1e6'],
 }

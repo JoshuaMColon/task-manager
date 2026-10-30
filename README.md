@@ -16,7 +16,7 @@ XPlan is a full-stack to-do app built like a game. Tasks are **quests**. Finishi
 - **Repeating quests:** daily, weekdays, weekly, monthly and yearly, every *n*. Finishing one schedules the next occurrence.
 - **Feedback on every platform:** the XP pop, the level-up toast and trophy toasts run the same for mouse, keyboard and touch, with haptics on phones. All motion respects `prefers-reduced-motion`.
 - **Customization:**
-  - Three skins: **Forge** (gunmetal + orange), **Bloom** (rose + violet) and **Slate** (neutral).
+  - Four skins: **Forge** (gunmetal + molten orange, dark) and its light twin **Alloy** (brushed steel + orange) with a one-tap light/dark toggle, plus **Bloom** (rose + violet) and **Slate** (neutral).
   - An accent color, plus an avatar from a built-in set or your initials.
   - Choices are saved to your profile.
 - **Keyboard first:**
@@ -75,7 +75,7 @@ npm run dev
 | `npm run dev` | Vite dev server |
 | `npm run build` | Type-check + production build |
 | `npm test` | Vitest unit tests (parser, XP curve, recurrence, local rules) |
-| `npm run test:e2e` | Playwright flows + axe WCAG 2.1 AA scans on every view in all three skins |
+| `npm run test:e2e` | Playwright flows + axe WCAG 2.1 AA scans on every view in all four skins |
 | `npm run lint` / `typecheck` | ESLint / tsc |
 
 Database migrations are in `supabase/migrations/`. Apply them with `supabase db push`.

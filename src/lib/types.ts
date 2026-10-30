@@ -1,7 +1,7 @@
 export type Priority = 1 | 2 | 3 | 4
 export type Recurrence = 'daily' | 'weekdays' | 'weekly' | 'monthly' | 'yearly'
 export type Status = 'open' | 'done'
-export type SkinId = 'forge' | 'bloom' | 'slate'
+export type SkinId = 'forge' | 'alloy' | 'bloom' | 'slate'
 
 export interface Task {
   id: string

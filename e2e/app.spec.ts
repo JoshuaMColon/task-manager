@@ -87,8 +87,24 @@ test('skins can be switched and persist', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'bloom')
 })
 
+test('Forge pairs with its light twin Alloy', async ({ page }) => {
+  await demo(page)
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'forge')
+  await page.getByRole('button', { name: 'Switch to light mode (Alloy)' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'alloy')
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'light')
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'alloy')
+  await page.getByRole('button', { name: 'Switch to dark mode (Forge)' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'forge')
+  await page.keyboard.press('ControlOrMeta+k')
+  await page.getByRole('combobox', { name: 'Command' }).fill('skin bloom')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('button', { name: /Switch to (light|dark) mode/ })).toHaveCount(0)
+})
+
 for (const path of ['/', '/today', '/upcoming', '/log', '/trophies']) {
-  for (const skin of ['forge', 'bloom', 'slate']) {
+  for (const skin of ['forge', 'alloy', 'bloom', 'slate']) {
     test(`no WCAG A/AA violations: ${path} (${skin})`, async ({ page }) => {
       await demo(page)
       await page.evaluate((s) => {
