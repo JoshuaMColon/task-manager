@@ -1,6 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const PORT = 4173
+// Second build pointed at a fake Supabase host; e2e/cloud-*.spec.ts mock every request to it.
+const MOCK_PORT = 4174
+export const MOCK_SUPABASE = 'http://supabase.mock.test'
 
 export default defineConfig({
   testDir: './e2e',
@@ -14,12 +17,25 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
     viewport: { width: 1440, height: 900 },
   },
-  webServer: {
-    // Built without Supabase env so the app runs local-only; the save file lives in localStorage.
-    command: `npm run build && npx vite preview --port ${PORT} --strictPort`,
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    env: { VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' },
-  },
+  projects: [
+    { name: 'local', testIgnore: /cloud-.*\.spec\.ts/ },
+    { name: 'cloud-mock', testMatch: /cloud-.*\.spec\.ts/, use: { baseURL: `http://localhost:${MOCK_PORT}` } },
+  ],
+  webServer: [
+    {
+      // Built without Supabase env so the app runs local-only; the save file lives in localStorage.
+      command: `npm run build && npx vite preview --port ${PORT} --strictPort`,
+      url: `http://localhost:${PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: { VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' },
+    },
+    {
+      command: `npx vite build --outDir dist-mock && npx vite preview --outDir dist-mock --port ${MOCK_PORT} --strictPort`,
+      url: `http://localhost:${MOCK_PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: { VITE_SUPABASE_URL: MOCK_SUPABASE, VITE_SUPABASE_ANON_KEY: 'mock-anon-key' },
+    },
+  ],
 })

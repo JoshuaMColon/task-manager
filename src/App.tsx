@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarClock, CalendarDays, Flame, Gamepad2, Inbox, Keyboard, Loader2, Palette, Plus, ScrollText, Siren, Sparkles, Trophy } from 'lucide-react'
+import { CalendarClock, CalendarDays, Flame, Gamepad2, Inbox, Keyboard, Loader2, Palette, Plus, RotateCcw, ScrollText, Siren, Sparkles, Trophy } from 'lucide-react'
 import { AuthScreen } from './components/AuthScreen'
 import { CommandPalette, type Command } from './components/CommandPalette'
 import { Customize } from './components/Customize'
@@ -37,21 +37,39 @@ export default function App() {
 function Shell() {
   const auth = useAuth()
   const [route] = useRoute()
-  const fb = useFeedback()
-  const guestStarted = useRef(false)
   const [demo] = useState(route.demo)
+  // Which /demo visit we already started a guest sign-in for. Reset whenever we leave /demo, so a
+  // second "Play as guest" in the same tab (e.g. after signing out) starts a fresh guest again.
+  const guestStarted = useRef(false)
+  const [guestError, setGuestError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
 
   // /demo signs in a fresh anonymous guest (cloud) or seeds the local save file.
   useEffect(() => {
-    if (!route.demo || !auth.enabled || !auth.ready || guestStarted.current) return
+    if (!route.demo) {
+      guestStarted.current = false
+      return
+    }
+    if (!auth.enabled || !auth.ready || guestStarted.current) return
     if (auth.session?.user.is_anonymous) return
     guestStarted.current = true
     const go = async () => {
       if (auth.session) await auth.signOut()
-      await auth.guest()
+      await withTimeout(auth.guest(), GUEST_TIMEOUT_MS, 'The guest sign-in timed out.')
     }
-    go().catch((e) => fb.toast({ kind: 'error', title: 'Guest sign-in failed', body: e instanceof Error ? e.message : undefined }))
-  }, [route.demo, auth, fb])
+    // Shown only while we're still on /demo without a session; leaving /demo clears it.
+    go().catch((e) => setGuestError(e instanceof Error ? e.message : 'Guest sign-in failed.'))
+  }, [route.demo, auth, attempt])
+
+  const retryGuest = () => {
+    guestStarted.current = false
+    setGuestError(null)
+    setAttempt((n) => n + 1)
+  }
+  const leaveDemo = () => {
+    setGuestError(null)
+    navigate('/')
+  }
 
   const userId = auth.session?.user.id
   const backend = useMemo<Backend | null>(() => {
@@ -61,17 +79,61 @@ function Shell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
-  if (!auth.ready || (route.demo && auth.enabled && !auth.session)) return <Splash />
+  if (route.demo && auth.enabled && !auth.session && guestError)
+    return <LoadError title="Couldn’t start the guest demo" message={guestError} onRetry={retryGuest} onBack={leaveDemo} />
+  if (!auth.ready || (route.demo && auth.enabled && !auth.session)) return route.demo ? <Splash onRetry={retryGuest} onBack={leaveDemo} /> : <Splash />
   if (!backend)
-    return <AuthScreen onSignIn={auth.signIn} onSignUp={auth.signUp} onGuest={() => navigate('/demo')} />
+    return <AuthScreen onSignIn={auth.signIn} onSignUp={auth.signUp} onGuest={() => { setGuestError(null); navigate('/demo') }} />
   return <Game key={userId ?? 'local'} backend={backend} demo={demo || route.demo} guest={!!auth.session?.user.is_anonymous} onSignOut={auth.enabled ? () => void auth.signOut().then(() => navigate('/')) : undefined} />
 }
 
-function Splash({ text = 'Loading your save file…' }: { text?: string }) {
+const GUEST_TIMEOUT_MS = 15_000
+const SPLASH_STALL_MS = 15_000
+
+function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(message)), ms)
+    p.then(
+      (v) => { clearTimeout(t); resolve(v) },
+      (e) => { clearTimeout(t); reject(e) },
+    )
+  })
+}
+
+/** Loading screen. If it lasts too long it offers Retry instead of spinning forever. */
+function Splash({ text = 'Loading your save file…', onRetry, onBack }: { text?: string; onRetry?: () => void; onBack?: () => void }) {
+  const [stalled, setStalled] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setStalled(true), SPLASH_STALL_MS)
+    return () => clearTimeout(t)
+  }, [])
+  if (stalled)
+    return <LoadError title="This is taking longer than it should" message="Your save file didn’t load. Check your connection and try again." onRetry={onRetry ?? (() => window.location.reload())} onBack={onBack} />
   return (
     <main className="grid min-h-dvh place-items-center" aria-busy="true">
-      <div className="flex items-center gap-3 text-muted">
+      <div className="flex items-center gap-3 text-muted" role="status">
         <Loader2 className="size-5 animate-spin" aria-hidden="true" /> {text}
+      </div>
+    </main>
+  )
+}
+
+function LoadError({ title, message, onRetry, onBack }: { title: string; message: string; onRetry(): void; onBack?: () => void }) {
+  return (
+    <main className="grid min-h-dvh place-items-center px-4">
+      <div className="card max-w-sm p-6 text-center" role="alert">
+        <h1 className="display text-lg font-extrabold">{title}</h1>
+        <p className="mt-2 text-sm text-muted">{message}</p>
+        <div className="mt-5 flex justify-center gap-2">
+          <button type="button" className="btn btn-primary" onClick={onRetry}>
+            <RotateCcw className="size-4" aria-hidden="true" /> Retry
+          </button>
+          {onBack && (
+            <button type="button" className="btn btn-ghost" onClick={onBack}>
+              Back to sign in
+            </button>
+          )}
+        </div>
       </div>
     </main>
   )
@@ -105,7 +167,7 @@ function Game({ backend, demo, guest, onSignOut }: { backend: Backend; demo: boo
     if (snap) applySkin(snap.profile.skin, snap.profile.accent)
   }, [snap?.profile.skin, snap?.profile.accent]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (error) return <Splash text={`Couldn’t load: ${error}`} />
+  if (error) return <LoadError title="Couldn’t load your save file" message={error} onRetry={() => window.location.reload()} />
   if (!snap) return <Splash />
   return <GameUI snap={snap} actions={actions} view={route.view} projectId={route.projectId} go={go} mode={backend.mode} guest={guest} onSignOut={onSignOut} />
 }
