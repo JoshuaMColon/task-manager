@@ -31,3 +31,4 @@ dist-ssr
 playwright-report
 test-results
 *.tsbuildinfo
+dist-mock
