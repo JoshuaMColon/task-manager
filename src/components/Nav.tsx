@@ -31,7 +31,7 @@ interface NavProps {
 function ModeToggle({ t, className }: { t: NonNullable<NavProps['modeToggle']>; className: string }) {
   const Icon = t.dark ? Sun : Moon
   return (
-    <button type="button" onClick={t.run} className={className} aria-label={t.label} title={t.label} data-mode-toggle>
+    <button type="button" onClick={t.run} className={className} aria-label={t.label} data-mode-toggle>
       <Icon className="size-4" />
     </button>
   )
