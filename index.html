@@ -1,111 +1,30 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-skin="forge">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Task Manager</title>
-    <link rel="stylesheet" href="style.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>XPlan — level up your to-do list</title>
+    <meta name="description" content="XPlan turns your tasks into quests: earn XP, keep your combo alive, unlock trophies. A full-stack React + Supabase task manager with natural-language quick add, repeating quests, realtime sync and a command palette." />
+    <meta name="theme-color" content="#14171b" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://ghhrqiwrnquyvgpnhhxd.supabase.co" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="XPlan" />
+    <meta property="og:title" content="XPlan — level up your to-do list" />
+    <meta property="og:description" content="Tasks become quests. Earn XP, keep your combo, unlock trophies." />
+    <meta name="twitter:card" content="summary" />
+    <script>
+      // Apply the saved skin before first paint (no flash).
+      try {
+        var s = JSON.parse(localStorage.getItem('xplan:skin') || 'null')
+        if (s && /^(forge|bloom|slate)$/.test(s.skin)) document.documentElement.dataset.skin = s.skin
+      } catch (e) {}
+    </script>
   </head>
-
   <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div>
-          <div class="brand">Lumen</div>
-          <nav class="nav-links">
-            <a class="nav-link active" href="#">Home</a>
-            <a class="nav-link" href="#">Today</a>
-            <a class="nav-link" href="#">Planner</a>
-            <a class="nav-link" href="#">Habits</a>
-          </nav>
-        </div>
-
-        <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
-      </aside>
-
-      <main class="container">
-        <header class="top-row">
-          <div class="header-copy">
-            <p class="eyebrow">Life Planner</p>
-            <h1>Plan your day with clarity.</h1>
-            <p class="hero-copy">
-              A calm place to capture what matters and move through your week
-              with intention.
-            </p>
-          </div>
-        </header>
-
-        <section class="planner-grid">
-          <div class="summary-card">
-            <div class="summary-text">
-              <p id="task-count">0 tasks remaining</p>
-              <p class="summary-subtitle">Small steps create big progress.</p>
-            </div>
-
-            <div class="progress-container">
-              <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-              </div>
-              <span class="progress-label" id="progress-label"
-                >0 of 0 completed</span
-              >
-            </div>
-          </div>
-
-          <div class="planner-card">
-            <div class="input-row">
-              <input
-                type="text"
-                id="task-input"
-                placeholder="What deserves your attention today?"
-              />
-
-              <button onclick="addTask()">Add</button>
-            </div>
-
-            <div class="extra-row">
-              <input type="date" id="task-date" />
-              <select id="task-priority">
-                <option value="low">🟢 Low</option>
-                <option value="medium" selected>🟡 Medium</option>
-                <option value="high">🔴 High</option>
-              </select>
-            </div>
-          </div>
-        </section>
-
-        <section class="task-section">
-          <div class="filter-row">
-            <button
-              id="filter-all"
-              class="filter-btn filter-active"
-              onclick="setFilter('all')"
-            >
-              All
-            </button>
-            <button
-              id="filter-active"
-              class="filter-btn"
-              onclick="setFilter('active')"
-            >
-              Active
-            </button>
-            <button
-              id="filter-completed"
-              class="filter-btn"
-              onclick="setFilter('completed')"
-            >
-              Completed
-            </button>
-          </div>
-
-          <ul id="task-list">
-            <!-- Tasks will appear here - added by JavaScript -->
-          </ul>
-        </section>
-      </main>
-    </div>
-
-    <script src="script.js"></script>
+    <noscript>XPlan needs JavaScript.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
