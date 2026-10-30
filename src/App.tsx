@@ -6,6 +6,7 @@ import { Customize } from './components/Customize'
 import { FeedbackProvider, useFeedback } from './components/Feedback'
 import { Heatmap } from './components/Heatmap'
 import { MobileNav, Sidebar } from './components/Nav'
+import { nameFromEmail } from './lib/names'
 import { NAV } from './lib/nav'
 import { PlayerCard } from './components/PlayerCard'
 import { QuestEditor } from './components/QuestEditor'
@@ -56,7 +57,7 @@ function Shell() {
   const backend = useMemo<Backend | null>(() => {
     if (!supabase) return localBackend()
     if (!userId) return null
-    return cloudBackend(supabase, userId, auth.session?.user.email?.split('@')[0]?.slice(0, 32) || 'Player')
+    return cloudBackend(supabase, userId, nameFromEmail(auth.session?.user.email))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
