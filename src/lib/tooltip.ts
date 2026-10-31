@@ -30,7 +30,8 @@ function hasVisibleText(el: HTMLElement): boolean {
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     if (!n.textContent?.trim()) continue
     let p = n.parentElement
-    let visible = !!p
+    // Decorative glyphs (aria-hidden) aren't a label: an icon + ▼ chip still needs a tooltip.
+    let visible = !!p && !p.closest('[aria-hidden="true"]')
     while (p && visible) {
       const cs = getComputedStyle(p)
       if (cs.display === 'none' || cs.visibility === 'hidden' || (p.clientWidth <= 1 && p.clientHeight <= 1 && cs.overflow !== 'visible')) visible = false
