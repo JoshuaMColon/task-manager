@@ -350,3 +350,63 @@
   .anim-spark, .anim-shine::after { display: none; }
   .anim-toast, .anim-level, .anim-check { animation: fade-in 150ms ease-out; }
 }
+
+/* ------------------------------------------------------------------ tooltips (src/lib/tooltip.ts) */
+.app-tooltip {
+  position: fixed;
+  z-index: 2147483000;
+  max-width: min(18rem, calc(100vw - 16px));
+  pointer-events: none;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: 700 0.75rem/1.3 var(--font-sans);
+  letter-spacing: 0.01em;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);
+  opacity: 0;
+  transform: translateY(var(--tip-shift, -3px));
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+.app-tooltip[data-side='top'] { --tip-shift: 3px; }
+.app-tooltip[data-state='open'] { opacity: 1; transform: none; }
+.app-tooltip[hidden] { display: none !important; }
+/* Forge: dark HUD plate with the ember accent edge */
+[data-skin='forge'] .app-tooltip {
+  border-color: var(--line-strong);
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--surface) 92%, black);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+}
+/* Alloy: crisp, square, steel */
+[data-skin='alloy'] .app-tooltip {
+  border-radius: 2px;
+  background: var(--text);
+  color: var(--surface);
+  border-color: var(--text);
+  box-shadow: 0 2px 0 var(--accent);
+}
+/* Bloom: soft pill with a candy glow */
+[data-skin='bloom'] .app-tooltip {
+  border-radius: 999px;
+  padding-inline: 0.75rem;
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+/* Slate: quiet neutral label */
+[data-skin='slate'] .app-tooltip {
+  background: var(--text);
+  color: var(--surface);
+  border-color: transparent;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.18);
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-tooltip { transition: none; transform: none; }
+}

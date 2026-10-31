@@ -99,6 +99,7 @@ export function QuestItem({ task, project, today, selected, showDate = true, onC
           role="checkbox"
           aria-checked={done}
           aria-label={done ? `Reopen quest: ${task.title}` : `Complete quest: ${task.title}`}
+          data-tip={done ? 'Reopen quest' : 'Complete quest'}
           onClick={(e) => {
             e.stopPropagation()
             if (done) onReopen(task)
