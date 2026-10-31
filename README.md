@@ -18,6 +18,7 @@ XPlan is a full-stack to-do app built like a game. Tasks are **quests**. Finishi
 - **Customization:**
   - Four skins: **Forge** (gunmetal + molten orange, dark) and its light twin **Alloy** (brushed steel + orange) with a one-tap light/dark toggle, plus **Bloom** (rose + violet) and **Slate** (neutral).
   - An accent color, plus an avatar from a built-in set or your initials.
+  - New players get a friendly default name from their email (`jane.doe+xplan@…` → **Jane Doe**). A name you've set is never overwritten.
   - Choices are saved to your profile.
 - **Keyboard first:**
   - <kbd>⌘/Ctrl K</kbd> opens the command palette.
@@ -26,7 +27,8 @@ XPlan is a full-stack to-do app built like a game. Tasks are **quests**. Finishi
   - <kbd>?</kbd> lists every shortcut.
 - **Mobile:** swipe right to complete, swipe left to snooze. The app also has bottom tabs and a compact XP header.
 - **Realtime + optimistic UI:** changes show up at once, then sync with the server, and other tabs and devices update live.
-- **Auth:** email + password sign-in, or **Play as guest** (`/demo`), which opens a seeded save file one quest away from a level-up.
+- **Auth:** email + password sign-in, or **Play as guest** (`/demo`), which opens a seeded save file one quest away from a level-up. Signing out and playing as guest again in the same tab works, and if guest sign-in fails or stalls (rate limit, captcha, network) a **Retry** screen appears within 15 seconds instead of an endless spinner.
+- **Tooltips:** icon-only buttons show their label in a tooltip after a short hover or on keyboard focus. Tooltips are announced to screen readers (`role="tooltip"` + `aria-describedby`), close on Esc, and never pop up from a tap, styled to match each skin.
 
 ## Architecture
 
