@@ -177,7 +177,12 @@ export function computeStats(s: GameState, now = new Date(), days = 182): Stats 
 
 const HISTORY_TITLES = ['Inbox zero', 'Code review', '30 min walk', 'Write standup notes', 'Refactor auth hook', 'Meal prep', 'Read 20 pages', 'Fix flaky test', 'Call mom', 'Stretch', 'Update portfolio', 'Laundry', 'Practice Spanish', 'Pay electric bill', 'Plan the week', 'Ship a small PR']
 
-/** Mirrors public.xplan_start_demo(): a lived-in save file 15 XP short of a level-up. */
+/**
+ * Same save file as public.xplan_start_demo(). About five weeks of history,
+ * a few rest days so the combo isn't a solid block, and the open quests a
+ * walkthrough actually clicks. I then top the ledger up to 15 XP short of
+ * the next level so the first completion levels them up.
+ */
 export function seedDemo(now = new Date()): GameState {
   const today = todayISO(now)
   const mk = (name: string, color: string): Project => ({ id: uid(), name, color, created_at: now.toISOString() })
@@ -219,6 +224,9 @@ export function seedDemo(now = new Date()): GameState {
   let state: GameState = { tasks, projects, xp, achievements: [] }
   const total = totalXp(state)
   const lvl = levelFor(total)
+  // If the history already passed the next threshold, aim at the one after
+  // that. The top-up is a seed row with no task, dated yesterday so it doesn't
+  // count as XP earned today.
   let target = levelThreshold(lvl + 1) - 15
   if (target < total) target = levelThreshold(lvl + 2) - 15
   if (target > total) state = { ...state, xp: [...state.xp, { task_id: null, kind: 'seed', xp: target - total, created_at: new Date(now.getTime() - 86_400_000).toISOString() }] }

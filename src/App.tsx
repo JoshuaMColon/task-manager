@@ -40,22 +40,29 @@ function Shell() {
   // Latched from the first URL. After the save loads I replace /demo with /,
   // and this flag is what still tells a remounted game to call startDemo.
   const [demo] = useState(route.demo)
-  // Which /demo visit we already started a guest sign-in for. Reset whenever we leave /demo, so a
-  // second "Play as guest" in the same tab (e.g. after signing out) starts a fresh guest again.
+  // Latch for this /demo visit. `auth` is a new object every render, so the
+  // effect re-runs constantly. Without the latch I'd sign out the guest I just
+  // created and start another one, orphaning the save. Leaving /demo clears it,
+  // so a second "Play as guest" after sign-out gets a fresh anonymous user.
   const guestStarted = useRef(false)
   const [guestError, setGuestError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
 
-  // /demo signs in a fresh anonymous guest (cloud) or seeds the local save file.
+  // /demo signs in a fresh anonymous guest. Local mode has no auth, so this
+  // effect bails and useGame seeds the save file directly.
   useEffect(() => {
     if (!route.demo) {
       guestStarted.current = false
       return
     }
     if (!auth.enabled || !auth.ready || guestStarted.current) return
+    // Already a guest (refresh on /demo). Minting another anonymous user would
+    // throw away the save we just seeded.
     if (auth.session?.user.is_anonymous) return
     guestStarted.current = true
     const go = async () => {
+      // Someone opened /demo while a real session was current. Clear it first
+      // so the seeded rows land on the guest, not on that account.
       if (auth.session) await auth.signOut()
       await withTimeout(auth.guest(), GUEST_TIMEOUT_MS, 'The guest sign-in timed out.')
     }
@@ -97,9 +104,12 @@ function Shell() {
   return <Game key={userId ?? 'local'} backend={backend} demo={demo || route.demo} guest={!!auth.session?.user.is_anonymous} onSignOut={auth.enabled ? () => void auth.signOut().then(() => navigate('/')) : undefined} />
 }
 
+// Same 15s budget for a hung guest sign-in and for a load that never finishes.
 const GUEST_TIMEOUT_MS = 15_000
 const SPLASH_STALL_MS = 15_000
 
+// I race the promise. I don't abort the request — I just stop waiting, so the
+// splash can turn into a Retry card. A late success still updates the session.
 function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const t = setTimeout(() => reject(new Error(message)), ms)
@@ -170,6 +180,8 @@ function Game({ backend, demo, guest, onSignOut }: { backend: Backend; demo: boo
   })
 
   useEffect(() => {
+    // Once the save is in, /demo becomes /. A refresh then looks like a normal
+    // visit. The seed itself is idempotent if they do land on /demo again.
     if (snap && route.demo) navigate('/', true)
   }, [snap, route.demo])
 
