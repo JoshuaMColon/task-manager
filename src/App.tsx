@@ -61,8 +61,9 @@ function Shell() {
     if (auth.session?.user.is_anonymous) return
     guestStarted.current = true
     const go = async () => {
-      // Someone opened /demo while a real session was current. Clear it first
-      // so the seeded rows land on the guest, not on that account.
+      // Someone opened /demo while a real session was current. I sign it out
+      // first so the shell drops to the splash instead of staying on that
+      // account's game while the anonymous sign-in is in flight.
       if (auth.session) await auth.signOut()
       await withTimeout(auth.guest(), GUEST_TIMEOUT_MS, 'The guest sign-in timed out.')
     }

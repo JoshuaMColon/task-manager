@@ -172,8 +172,8 @@ export function localBackend(): Backend {
     if (!t) throw new Error('Quest not found')
     return t
   }
-  // Still async, matching the cloud methods. A sync return would race the
-  // optimistic update in useGame, which assumes the write settles later.
+  // Resolved on a later turn so local mode matches the cloud call shape.
+  // useGame paints the optimistic row first, then swaps in this result.
   const later = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 0))
   return {
     mode: 'local',
