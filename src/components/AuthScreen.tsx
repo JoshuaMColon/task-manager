@@ -7,6 +7,8 @@ interface Props {
   onGuest(): void
 }
 
+// Email and password only. "Play as guest" does not sign anyone in here —
+// it navigates to /demo, and the shell starts the anonymous session there.
 export function AuthScreen({ onSignIn, onSignUp, onGuest }: Props) {
   const [mode, setMode] = useState<'in' | 'up'>('in')
   const [email, setEmail] = useState('')
@@ -21,6 +23,8 @@ export function AuthScreen({ onSignIn, onSignUp, onGuest }: Props) {
       if (mode === 'in') await onSignIn(email, password)
       else {
         const r = await onSignUp(email, password)
+        // A session means they're in (the shell will swap this screen out).
+        // No session means confirmation is still required, so stay here.
         if (r.needsConfirm) setMsg({ tone: 'info', text: 'Check your inbox to confirm your email, then sign in.' })
       }
     } catch (e) {

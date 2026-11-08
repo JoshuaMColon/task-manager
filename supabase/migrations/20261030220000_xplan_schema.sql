@@ -4,6 +4,10 @@
 -- Trust model: the client may create and edit quests, and flip status between open/done.
 -- XP, completion time, on-time flags, recurrence spawning and achievements are decided
 -- by triggers in the database, so a player cannot award themselves XP.
+--
+-- I revoke the schema from anon and public on purpose. A request with no session
+-- has no path in, even before RLS runs. authenticated gets usage, and then only
+-- the grants at the bottom of this file.
 create schema if not exists xplan;
 comment on schema xplan is 'XPlan (JoshuaMColon/task-manager). Separate from the blog and weather app.';
 revoke all on schema xplan from public, anon;
@@ -58,7 +62,10 @@ create index tasks_tags_idx on xplan.tasks using gin (tags);
 create index tasks_project_idx on xplan.tasks (project_id);
 create index tasks_spawned_from_idx on xplan.tasks (spawned_from);
 
--- Append-only XP ledger, written only by triggers / definer functions.
+-- Append-only XP ledger. There is no insert policy for authenticated, and the
+-- grant below is SELECT only. Triggers that run as the owner write the rows;
+-- a player can read their own and nothing else. Undo inserts a negative row
+-- rather than deleting the award, so the ledger stays a history.
 create table xplan.xp_events (
   id bigint generated always as identity primary key,
   user_id uuid not null references auth.users (id) on delete cascade,
@@ -78,8 +85,13 @@ create table xplan.achievements (
 );
 
 -- ---------------------------------------------------------------- game rules
+-- search_path is empty on every function, and every call is schema-qualified.
+-- A function here can't be pointed at an object someone planted in public.
+--
 -- Total XP needed to reach level L is 25n^2 + 75n with n = L - 1
 -- (100 XP for level 2, then each level costs 50 XP more than the last).
+-- src/lib/xp.ts is the same curve. The client uses it for the optimistic pop;
+-- this copy is what actually gets stored.
 create or replace function xplan.level_threshold(lvl integer)
 returns integer language sql immutable set search_path = '' as $$
   select (25 * (greatest(lvl, 1) - 1) * (greatest(lvl, 1) - 1) + 75 * (greatest(lvl, 1) - 1))::integer
@@ -90,6 +102,8 @@ returns integer language plpgsql immutable set search_path = '' as $$
 declare n integer;
 begin
   if coalesce(total_xp, 0) <= 0 then return 1; end if;
+  -- Quadratic inverse of 25n^2 + 75n, then a step either way. The sqrt can
+  -- land on the wrong integer exactly on a threshold.
   n := floor((-75 + sqrt(5625 + 100 * total_xp::numeric)) / 50)::integer;
   while xplan.level_threshold(n + 2) <= total_xp loop n := n + 1; end loop;
   while n > 0 and xplan.level_threshold(n + 1) > total_xp loop n := n - 1; end loop;
@@ -114,6 +128,9 @@ begin
     when 'monthly' then return (from_date + make_interval(months => step))::date;
     when 'yearly' then return (from_date + make_interval(years => step))::date;
     when 'weekdays' then
+      -- `step` is ignored. "Every 2 weekdays" is not a rule I support; the
+      -- interval only applies to daily, weekly, monthly and yearly. The
+      -- client nextDue() does the same.
       loop
         d := d + 1;
         exit when extract(isodow from d) < 6;
@@ -129,6 +146,12 @@ returns text language sql stable security invoker set search_path = '' as $$
 $$;
 
 -- Current and best streak ("combo"): consecutive local days with at least one completion.
+-- The combo stays alive if the last clear was yesterday (last_day >= today - 1).
+--
+-- security definer, and NOT granted to authenticated. The function takes a uid,
+-- so if a client could call it, they could read another player's combo — definer
+-- bypasses RLS. xplan_stats and check_achievements call it with auth.uid(), or
+-- with the row's user_id from a trigger.
 create or replace function xplan.streaks(uid uuid)
 returns table (current_streak integer, best_streak integer)
 language sql stable security definer set search_path = '' as $$
@@ -177,6 +200,8 @@ create trigger projects_guard before insert or update on xplan.projects
 
 -- Runs as the caller, so `current_user` tells client writes ('authenticated')
 -- apart from trusted writes made inside security definer functions.
+-- That split is how the demo seed and the repeat-spawn insert are allowed to
+-- set xp_awarded and spawned_from, while a normal client write is not.
 create or replace function xplan.guard_task()
 returns trigger language plpgsql security invoker set search_path = '' as $$
 declare
@@ -204,6 +229,9 @@ begin
 
   if tg_op = 'INSERT' then
     if not trusted then
+      -- A client insert always starts open, with no XP and no parent. The
+      -- spawned follow-up is inserted by after_task_change, which is definer,
+      -- so it keeps spawned_from. Without that link, undo couldn't find the child.
       new.status := 'open'; new.completed_at := null; new.xp_awarded := 0;
       new.on_time := null; new.spawned_from := null; new.created_at := now();
       if (select count(*) from xplan.tasks where user_id = new.user_id) >= 2000 then
@@ -236,6 +264,10 @@ end $$;
 create trigger tasks_guard before insert or update on xplan.tasks
   for each row execute function xplan.guard_task();
 
+-- Definer, and not granted to the client, for the same reason as streaks:
+-- it takes a uid and reads every quest that user has. Called from the
+-- status trigger and from xplan_start_demo, both of which already know the uid.
+-- on conflict do nothing: trophies are never revoked when a quest is reopened.
 create or replace function xplan.check_achievements(uid uuid)
 returns void language plpgsql security definer set search_path = '' as $$
 declare
@@ -267,6 +299,9 @@ begin
   on conflict do nothing;
 end $$;
 
+-- Definer so this can insert into xp_events and achievements (no client write
+-- grant) and so the spawned quest is a trusted insert. It only fires when
+-- status changes — editing a title does not re-award XP.
 create or replace function xplan.after_task_change()
 returns trigger language plpgsql security definer set search_path = '' as $$
 declare
@@ -311,6 +346,9 @@ alter table xplan.xp_events enable row level security;
 alter table xplan.achievements enable row level security;
 
 -- Signed-in users, including anonymous guests from /demo, only ever see their own rows.
+-- auth.uid() is wrapped in a subselect so Postgres evaluates it once per query
+-- (an initplan) instead of once per row. xp_events and achievements have SELECT
+-- policies only: there is no client path that writes them.
 create policy "Players read own profile" on xplan.profiles for select to authenticated using ((select auth.uid()) = user_id);
 create policy "Players add own profile" on xplan.profiles for insert to authenticated with check ((select auth.uid()) = user_id);
 create policy "Players update own profile" on xplan.profiles for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
@@ -341,6 +379,9 @@ grant execute on function xplan.level_threshold(integer), xplan.level_for(intege
 -- reachable through the triggers and the public.xplan_* functions that pin uid to auth.uid().
 grant execute on function xplan.user_tz(uuid) to authenticated;
 
--- Realtime: quests, achievements and profile sync across tabs/devices (RLS still applies).
+-- Realtime: quests, achievements and profile sync across tabs and devices.
+-- RLS still applies to the subscriber. Replica identity FULL because the
+-- publication filter is user_id, which is not the primary key — the old row
+-- has to carry it or an UPDATE/DELETE won't match the client channel.
 alter table xplan.tasks replica identity full;
 alter publication supabase_realtime add table xplan.tasks, xplan.achievements, xplan.profiles;

@@ -7,6 +7,12 @@ import type { Priority, Recurrence } from './types'
  *   "Gym tomorrow at 6pm #health"   "Standup every weekday 9:30am @work"
  * Returns the cleaned title plus the recognised pieces and their character spans,
  * so the input can show a live, colour-coded preview.
+ *
+ * First match of each kind wins, and those characters are taken so a later
+ * rule can't reuse them. Tags are the exception: a quest can carry up to
+ * eight, so they run after the one-per-kind pass.
+ * Repeats are listed before dates. "every friday" is a weekly quest that
+ * lands on Friday, not a one-off date with the word "every" left in the title.
  */
 export type TokenKind = 'date' | 'time' | 'repeat' | 'priority' | 'tag' | 'project'
 
@@ -279,6 +285,8 @@ export function parseQuickAdd(input: string, today = todayISO()): ParsedQuest {
     for (let i = s; i < e; i++) taken[i] = true
     out.tokens.push({ kind, start: s, end: e, text: input.slice(s, e) })
   }
+  // `done` skips the rest of a kind once one rule applies. A rule that
+  // doesn't match leaves the kind open for the next pattern.
   const done = new Set<TokenKind>()
 
   for (const rule of RULES) {
@@ -307,7 +315,8 @@ export function parseQuickAdd(input: string, today = todayISO()): ParsedQuest {
     claim('tag', s, e)
   }
 
-  // A repeat or a time with no date starts today (an "every <day>" rule already set its date).
+  // A repeat or a time with no date starts today. "every friday" already set
+  // its date, so this doesn't overwrite that. The DB rejects a repeat with no due date.
   if (!out.due_date && (out.recurrence || out.due_time)) out.due_date = today
 
   out.tokens.sort((a, b) => a.start - b.start)

@@ -8,7 +8,8 @@ export interface AchievementMeta {
   icon: LucideIcon
 }
 
-/** Display data for the codes awarded by xplan.check_achievements(). */
+// Labels for the codes xplan.check_achievements inserts. The code strings have
+// to match the SQL exactly; the database never stores the display name.
 export const ACHIEVEMENTS: AchievementMeta[] = [
   { code: 'first_quest', name: 'First Quest', desc: 'Complete your first quest', icon: Sparkles },
   { code: 'quests_10', name: 'Adventurer', desc: 'Complete 10 quests', icon: Target },

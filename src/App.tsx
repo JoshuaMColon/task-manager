@@ -37,23 +37,34 @@ export default function App() {
 function Shell() {
   const auth = useAuth()
   const [route] = useRoute()
+  // Latched from the first URL. After the save loads I replace /demo with /,
+  // and this flag is what still tells a remounted game to call startDemo.
   const [demo] = useState(route.demo)
-  // Which /demo visit we already started a guest sign-in for. Reset whenever we leave /demo, so a
-  // second "Play as guest" in the same tab (e.g. after signing out) starts a fresh guest again.
+  // Latch for this /demo visit. `auth` is a new object every render, so this
+  // effect re-runs whenever the shell renders. Without the latch I'd sign out
+  // the guest I just created and start another one, orphaning the save.
+  // Leaving /demo clears it, so a second "Play as guest" after sign-out gets
+  // a fresh anonymous user.
   const guestStarted = useRef(false)
   const [guestError, setGuestError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
 
-  // /demo signs in a fresh anonymous guest (cloud) or seeds the local save file.
+  // /demo signs in a fresh anonymous guest. Local mode has no auth, so this
+  // effect bails and useGame seeds the save file directly.
   useEffect(() => {
     if (!route.demo) {
       guestStarted.current = false
       return
     }
     if (!auth.enabled || !auth.ready || guestStarted.current) return
+    // Already a guest (refresh on /demo). Minting another anonymous user would
+    // throw away the save we just seeded.
     if (auth.session?.user.is_anonymous) return
     guestStarted.current = true
     const go = async () => {
+      // Someone opened /demo while a real session was current. I sign it out
+      // first so the shell drops to the splash instead of staying on that
+      // account's game while the anonymous sign-in is in flight.
       if (auth.session) await auth.signOut()
       await withTimeout(auth.guest(), GUEST_TIMEOUT_MS, 'The guest sign-in timed out.')
     }
@@ -72,6 +83,10 @@ function Shell() {
   }
 
   const userId = auth.session?.user.id
+  // No client: one local save, no sign-in wall. With a client I wait for a user
+  // id, then bind a cloud backend to it. The memo depends only on that id;
+  // the display name is read once when the session appears, and the server
+  // prefers the email on the JWT when it creates the profile.
   const backend = useMemo<Backend | null>(() => {
     if (!supabase) return localBackend()
     if (!userId) return null
@@ -79,6 +94,10 @@ function Shell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
+  // A /demo visit with no session yet is a splash (or the retry card), not the
+  // sign-in form — the effect above is still creating the guest. No backend
+  // means cloud mode and nobody is signed in. The key drops the previous
+  // player's tree when the user id changes, so their snapshot can't linger.
   if (route.demo && auth.enabled && !auth.session && guestError)
     return <LoadError title="Couldn’t start the guest demo" message={guestError} onRetry={retryGuest} onBack={leaveDemo} />
   if (!auth.ready || (route.demo && auth.enabled && !auth.session)) return route.demo ? <Splash onRetry={retryGuest} onBack={leaveDemo} /> : <Splash />
@@ -87,9 +106,12 @@ function Shell() {
   return <Game key={userId ?? 'local'} backend={backend} demo={demo || route.demo} guest={!!auth.session?.user.is_anonymous} onSignOut={auth.enabled ? () => void auth.signOut().then(() => navigate('/')) : undefined} />
 }
 
+// Same 15s budget for a hung guest sign-in and for a load that never finishes.
 const GUEST_TIMEOUT_MS = 15_000
 const SPLASH_STALL_MS = 15_000
 
+// I race the promise. I don't abort the request — I just stop waiting, so the
+// splash can turn into a Retry card. A late success still updates the session.
 function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const t = setTimeout(() => reject(new Error(message)), ms)
@@ -160,6 +182,8 @@ function Game({ backend, demo, guest, onSignOut }: { backend: Backend; demo: boo
   })
 
   useEffect(() => {
+    // Once the save is in, /demo becomes /. A refresh then looks like a normal
+    // visit. The seed itself is idempotent if they do land on /demo again.
     if (snap && route.demo) navigate('/', true)
   }, [snap, route.demo])
 
@@ -186,6 +210,8 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
   const [custom, setCustom] = useState(false)
 
   const project = view === 'project' ? projects.find((p) => p.id === projectId) : undefined
+  // groupsFor is the view. `flat` is that same list in keyboard order, so j/k
+  // walks what is actually on screen, including overdue rows sitting above today.
   const groups = useMemo(() => groupsFor(view, tasks, today, projectId), [view, tasks, today, projectId])
   const flat = useMemo(() => groups.flatMap((g) => g.tasks), [groups])
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
@@ -244,7 +270,8 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
     [actions, fb],
   )
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts. Ignored while typing or a dialog is open, so a quest
+  // title can contain "x" without completing something.
   const gPending = useRef(false)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -276,6 +303,7 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
       }
       switch (e.key) {
         case 'g':
+          // "g" then a letter, vim-style. The latch expires so a stray g doesn't eat the next key.
           gPending.current = true
           setTimeout(() => (gPending.current = false), 1200)
           break
@@ -328,6 +356,7 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
         case '2':
         case '3':
         case '4':
+          // Keys 1-4 are the P-labels (P1 is urgent). The column stores 4..1, so I flip it.
           if (sel) actions.update(sel.id, { priority: (5 - Number(e.key)) as Priority })
           break
         case 'Escape':
@@ -362,6 +391,8 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
 
   const meta = TITLES[view]
   const Icon = meta.icon
+  // Today pre-fills a due date; a project view pre-fills that project.
+  // The quick-add parser still wins when the sentence names its own date or @project.
   const quickDefaults = view === 'today' ? { due_date: today } : view === 'project' ? { project_id: projectId ?? null } : undefined
   const list = (gs: Group[], opts?: { showDate?: (g: Group) => boolean }) =>
     gs.map((g) => (

@@ -1,4 +1,6 @@
-/** Local calendar dates as YYYY-MM-DD strings (no time zone drift). */
+// Calendar dates stay YYYY-MM-DD in local time. I never round-trip them
+// through toISOString(), which would shift the day for anyone east of UTC.
+// String compare is then chronological, which is what the view sorts rely on.
 export function toISODate(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -17,7 +19,8 @@ export function addDays(iso: string, n: number): string {
   return toISODate(d)
 }
 
-/** Like Postgres `date + interval 'n months'`: clamps to the last day of the month. */
+// Same clamping as Postgres `date + interval 'n months'`: Jan 31 plus one month is Feb 28.
+// xplan.next_due relies on that, so a monthly quest has to land on the same day here.
 export function addMonths(iso: string, n: number): string {
   const d = fromISODate(iso)
   const day = d.getDate()

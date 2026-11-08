@@ -1,5 +1,7 @@
 -- Friendlier default player names: the email local part without any +tag, split on . _ - and
 -- capitalized ("jane.doe+xplan@x.com" -> "Jane Doe"). Mirrors nameFromEmail in src/lib/names.ts.
+-- I read the email off the JWT inside the function rather than trusting the
+-- name argument alone. A guest has no email, so that path still uses `name`.
 -- Only affects newly created profiles; existing display names are never overwritten.
 
 create or replace function xplan.name_from_email(email text)
@@ -26,6 +28,7 @@ begin
     case when email is not null then xplan.name_from_email(email) else left(coalesce(nullif(btrim(name), ''), 'Player'), 32) end,
     coalesce(nullif(tz, ''), 'UTC')
   )
-  on conflict (user_id) do update set time_zone = excluded.time_zone; -- never touches display_name
+  -- time_zone only. A name set in Customize must not be replaced on the next sign-in.
+  on conflict (user_id) do update set time_zone = excluded.time_zone;
   return query select * from public.xplan_profiles where user_id = auth.uid();
 end $$;

@@ -37,18 +37,27 @@ export const QuickAdd = forwardRef<QuickAddHandle, Props>(function QuickAdd({ to
   const parsed = useMemo(() => parseQuickAdd(text, today), [text, today])
   const placeholder = useMemo(() => `Add a quest — try “${EXAMPLES[Math.floor(Date.now() / 86_400_000) % EXAMPLES.length]}”`, [])
 
+  // View defaults fill only what the sentence left blank. A typed date wins,
+  // and so does a repeat that already picked its day.
   const due = parsed.due_date ?? (defaults?.due_date && !parsed.tokens.some((t) => t.kind === 'date') ? defaults.due_date : null)
   const project = parsed.project ? projects.find((p) => p.name.toLowerCase() === parsed.project!.toLowerCase()) : projects.find((p) => p.id === defaults?.project_id)
+  // An @name that doesn't match a project yet is still passed through. useGame
+  // creates the project on submit rather than making the player do it first.
   const projectName = parsed.project ? (project?.name ?? parsed.project) : project?.name
+  // Preview only. Any dated quest is shown as on time; the trigger judges for real at completion.
+  // Unset priority previews as Normal (2), which is also the column default.
   const reward = xpFor(parsed.priority ?? 2, !!due)
 
   const submit = () => {
     if (!parsed.title) return
+    // A repeat with no due date is illegal in guard_task, so I drop it here.
     onAdd({ ...parsed, due_date: due, recurrence: due ? parsed.recurrence : null, project: projectName ?? null, project_id: project?.id ?? null })
     setText('')
   }
 
-  // Highlighted copy of the input text, rendered behind the transparent input.
+  // A copy of the text behind the real input: transparent glyphs, a background
+  // on each recognised token. The input stays real text, so what the player
+  // typed is never rendered as HTML.
   const segments = useMemo(() => {
     const out: { text: string; kind?: TokenKind }[] = []
     let i = 0

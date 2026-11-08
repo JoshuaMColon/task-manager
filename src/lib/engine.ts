@@ -3,8 +3,9 @@ import type { Achievement, Priority, Project, Stats, Task } from './types'
 import { DAILY_XP_CAP, levelFor, levelThreshold, nextOccurrence, xpFor } from './xp'
 
 /**
- * A pure, in-memory version of the database rules (xplan triggers + xplan_stats), used
- * when the app runs without Supabase (local mode, CI e2e) and covered by unit tests.
+ * The database rules, in memory. Local mode, CI, and the unit tests all run
+ * this instead of the triggers. I keep the two in step: if the SQL and this
+ * file disagree, the pop-up XP and the saved XP will drift.
  */
 export interface XpEvent {
   task_id: string | null
@@ -25,6 +26,7 @@ export const emptyState = (): GameState => ({ tasks: [], projects: [], xp: [], a
 const localDay = (ts: string) => toISODate(new Date(ts))
 const uid = () => (globalThis.crypto?.randomUUID?.() ?? `id-${Math.random().toString(36).slice(2)}-${Date.now()}`)
 
+// Tags are normalized the same way guard_task does it: trim, lowercase, distinct, sorted.
 export function newTask(fields: Partial<Task> & { title: string }, now = new Date()): Task {
   const ts = now.toISOString()
   return {
@@ -52,6 +54,8 @@ export function totalXp(s: GameState): number {
   return s.xp.reduce((a, e) => a + e.xp, 0)
 }
 
+// A combo is consecutive local days with at least one clear. It stays alive
+// through today if the last clear was yesterday — miss today and it drops tomorrow.
 export function streaks(tasks: Task[], today: string): { current: number; best: number } {
   const days = [...new Set(tasks.filter((t) => t.status === 'done' && t.completed_at).map((t) => localDay(t.completed_at!)))].sort()
   let best = 0
@@ -70,18 +74,23 @@ export function streaks(tasks: Task[], today: string): { current: number; best: 
   return { current, best }
 }
 
-/** Mirrors xplan.guard_task + xplan.after_task_change for an open -> done transition. */
+/** Same transition as guard_task plus after_task_change: open -> done. */
 export function complete(s: GameState, id: string, now = new Date()): GameState {
   const t = s.tasks.find((x) => x.id === id)
   if (!t || t.status === 'done') return s
   const today = toISODate(now)
+  // Same calendar day still counts as on time. No due date means no judgment either way.
   const onTime = t.due_date ? today <= t.due_date : null
+  // The cap counts quests that actually earned XP, not every completion. A zero-XP
+  // clear doesn't burn one of the 30 slots. Matches the count in guard_task.
   const rewardedToday = s.tasks.filter((x) => x.status === 'done' && x.xp_awarded > 0 && x.completed_at && localDay(x.completed_at) === today).length
   const xp = rewardedToday >= DAILY_XP_CAP ? 0 : xpFor(t.priority, !!onTime)
   const ts = now.toISOString()
   const done: Task = { ...t, status: 'done', completed_at: ts, on_time: onTime, xp_awarded: xp, updated_at: ts }
   let tasks = s.tasks.map((x) => (x.id === id ? done : x))
   if (t.recurrence && t.due_date) {
+    // One next occurrence, strictly after today. A backlog of dailies must not
+    // spawn a quest per missed day. spawned_from is what undo uses to take it back.
     const next = newTask({ ...t, id: undefined, status: 'open', completed_at: null, xp_awarded: 0, on_time: null, created_at: undefined, due_date: nextOccurrence(t.recurrence, t.recur_interval, t.due_date, today), spawned_from: t.id }, now)
     tasks = [...tasks, next]
   }
@@ -89,6 +98,9 @@ export function complete(s: GameState, id: string, now = new Date()): GameState 
   return checkAchievements({ ...s, tasks, xp: xpLog }, now)
 }
 
+// Reopening writes a negative ledger row instead of deleting the award, same as
+// the SQL trigger. I only remove the spawned child if it's still open — an edited
+// or completed follow-up stays. Trophies are not revoked; the trigger doesn't either.
 export function uncomplete(s: GameState, id: string, now = new Date()): GameState {
   const t = s.tasks.find((x) => x.id === id)
   if (!t || t.status !== 'done') return s
@@ -100,6 +112,7 @@ export function uncomplete(s: GameState, id: string, now = new Date()): GameStat
   return { ...s, tasks, xp: xpLog }
 }
 
+// Same thresholds as xplan.check_achievements. Unlock only — nothing here deletes a trophy.
 export function checkAchievements(s: GameState, now = new Date()): GameState {
   const done = s.tasks.filter((t) => t.status === 'done' && t.completed_at)
   const hour = (t: Task) => new Date(t.completed_at!).getHours()
@@ -126,7 +139,7 @@ export function checkAchievements(s: GameState, now = new Date()): GameState {
   return fresh.length ? { ...s, achievements: [...s.achievements, ...fresh] } : s
 }
 
-/** Mirrors public.xplan_stats(). */
+/** Same shape as public.xplan_stats(), including the 30-day clear rate. */
 export function computeStats(s: GameState, now = new Date(), days = 182): Stats {
   const today = toISODate(now)
   const total = totalXp(s)
@@ -164,7 +177,12 @@ export function computeStats(s: GameState, now = new Date(), days = 182): Stats 
 
 const HISTORY_TITLES = ['Inbox zero', 'Code review', '30 min walk', 'Write standup notes', 'Refactor auth hook', 'Meal prep', 'Read 20 pages', 'Fix flaky test', 'Call mom', 'Stretch', 'Update portfolio', 'Laundry', 'Practice Spanish', 'Pay electric bill', 'Plan the week', 'Ship a small PR']
 
-/** Mirrors public.xplan_start_demo(): a lived-in save file 15 XP short of a level-up. */
+/**
+ * Same save file as public.xplan_start_demo(). About five weeks of history,
+ * a few rest days so the combo isn't a solid block, and the open quests a
+ * walkthrough actually clicks. I then top the ledger up to 15 XP short of
+ * the next level so the first completion levels them up.
+ */
 export function seedDemo(now = new Date()): GameState {
   const today = todayISO(now)
   const mk = (name: string, color: string): Project => ({ id: uid(), name, color, created_at: now.toISOString() })
@@ -206,6 +224,9 @@ export function seedDemo(now = new Date()): GameState {
   let state: GameState = { tasks, projects, xp, achievements: [] }
   const total = totalXp(state)
   const lvl = levelFor(total)
+  // If the history already passed the next threshold, aim at the one after
+  // that. The top-up is a seed row with no task, dated yesterday so it doesn't
+  // count as XP earned today.
   let target = levelThreshold(lvl + 1) - 15
   if (target < total) target = levelThreshold(lvl + 2) - 15
   if (target > total) state = { ...state, xp: [...state.xp, { task_id: null, kind: 'seed', xp: target - total, created_at: new Date(now.getTime() - 86_400_000).toISOString() }] }

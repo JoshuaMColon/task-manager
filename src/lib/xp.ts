@@ -2,9 +2,10 @@ import { addDays, addMonths, isoDow } from './dates'
 import type { Priority, Recurrence } from './types'
 
 /**
- * Game rules. These mirror the SQL in supabase/migrations (xplan.level_threshold,
- * xplan.level_for, xplan.xp_for, xplan.next_due). The database is the source of truth;
- * the client uses these for optimistic UI and the offline/local mode.
+ * Game rules. These mirror the SQL (xplan.level_threshold, xplan.level_for,
+ * xplan.xp_for, xplan.next_due). The database is the source of truth; I use
+ * this copy for the optimistic pop and for local mode. If the two drift, the
+ * number on screen won't match the number that gets stored.
  */
 export const BASE_XP: Record<Priority, number> = { 1: 10, 2: 20, 3: 35, 4: 50 }
 export const DAILY_XP_CAP = 30
@@ -22,6 +23,8 @@ export function levelThreshold(level: number): number {
 
 export function levelFor(totalXp: number): number {
   if (totalXp <= 0) return 1
+  // Inverse of 25n^2 + 75n. I walk a step either way because the sqrt can
+  // land on the wrong integer right on a threshold. Same walk as the SQL.
   let n = Math.floor((-75 + Math.sqrt(5625 + 100 * totalXp)) / 50)
   while (levelThreshold(n + 2) <= totalXp) n++
   while (n > 0 && levelThreshold(n + 1) > totalXp) n--
@@ -71,6 +74,7 @@ export function nextDue(rule: Recurrence, step: number, from: string): string {
     case 'yearly':
       return addMonths(from, 12 * s)
     case 'weekdays': {
+      // The interval is ignored, matching xplan.next_due. "Every 2 weekdays" isn't a rule.
       let d = addDays(from, 1)
       while (isoDow(d) > 5) d = addDays(d, 1)
       return d
@@ -78,9 +82,11 @@ export function nextDue(rule: Recurrence, step: number, from: string): string {
   }
 }
 
-/** Next occurrence after completing a repeating quest: always strictly after today. */
+/** Next occurrence after a clear: always strictly after today. */
 export function nextOccurrence(rule: Recurrence, step: number, due: string, today: string): string {
   let next = nextDue(rule, step, due)
+  // Catch up a backlog in one jump. A daily quest finished a month late spawns
+  // tomorrow, not thirty rows. The 1000 cap matches the SQL loop.
   for (let i = 0; next <= today && i < 1000; i++) next = nextDue(rule, step, next)
   return next
 }

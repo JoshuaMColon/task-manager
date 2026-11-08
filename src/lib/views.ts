@@ -10,6 +10,9 @@ export interface Group {
   tone?: 'danger'
 }
 
+// YYYY-MM-DD sorts chronologically as text. A missing date sorts last ('9999')
+// so an undated quest never jumps ahead of a scheduled one. Then time, then
+// priority (4 is urgent, so higher first), then older created_at.
 const byTime = (a: Task, b: Task) =>
   (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999') ||
   (a.due_time ?? '99').localeCompare(b.due_time ?? '99') ||
@@ -29,6 +32,9 @@ export function matches(t: Task, q: string, projectName?: string): boolean {
   return t.title.toLowerCase().includes(s) || t.notes.toLowerCase().includes(s) || t.tags.some((g) => g.includes(s.replace(/^#/, ''))) || !!projectName?.toLowerCase().includes(s.replace(/^@/, ''))
 }
 
+// Each view is a pure slice of the same task array. Empty groups are dropped
+// so the page doesn't render a heading over nothing. HQ and Today share the
+// overdue-then-today grouping; "cleared today" is only on the Daily missions page.
 export function groupsFor(view: ViewId, tasks: Task[], today: string, projectId?: string): Group[] {
   const open = tasks.filter(isOpen)
   switch (view) {
@@ -44,6 +50,8 @@ export function groupsFor(view: ViewId, tasks: Task[], today: string, projectId?
       ].filter((g) => g.tasks.length)
     }
     case 'upcoming': {
+      // The next 7 calendar days, each as its own group, then one Later bucket.
+      // Days with nothing scheduled are omitted.
       const groups: Group[] = []
       for (let i = 1; i <= 7; i++) {
         const d = addDays(today, i)
@@ -64,6 +72,8 @@ export function groupsFor(view: ViewId, tasks: Task[], today: string, projectId?
       ].filter((g) => g.tasks.length)
     }
     case 'log': {
+      // Group by the local calendar day of completed_at, newest day first.
+      // Cloud mode only loads the latest 400 completions, so the log is that window there.
       const done = tasks.filter((t) => t.status === 'done' && t.completed_at).sort((a, b) => b.completed_at!.localeCompare(a.completed_at!))
       const map = new Map<string, Task[]>()
       for (const t of done) {
