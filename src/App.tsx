@@ -37,6 +37,8 @@ export default function App() {
 function Shell() {
   const auth = useAuth()
   const [route] = useRoute()
+  // Latched from the first URL. After the save loads I replace /demo with /,
+  // and this flag is what still tells a remounted game to call startDemo.
   const [demo] = useState(route.demo)
   // Which /demo visit we already started a guest sign-in for. Reset whenever we leave /demo, so a
   // second "Play as guest" in the same tab (e.g. after signing out) starts a fresh guest again.
@@ -72,6 +74,10 @@ function Shell() {
   }
 
   const userId = auth.session?.user.id
+  // No client: one local save, no sign-in wall. With a client I wait for a user
+  // id, then bind a cloud backend to it. The memo depends only on that id;
+  // the display name is read once when the session appears, and the server
+  // prefers the email on the JWT when it creates the profile.
   const backend = useMemo<Backend | null>(() => {
     if (!supabase) return localBackend()
     if (!userId) return null
@@ -79,6 +85,10 @@ function Shell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
+  // A /demo visit with no session yet is a splash (or the retry card), not the
+  // sign-in form — the effect above is still creating the guest. No backend
+  // means cloud mode and nobody is signed in. The key drops the previous
+  // player's tree when the user id changes, so their snapshot can't linger.
   if (route.demo && auth.enabled && !auth.session && guestError)
     return <LoadError title="Couldn’t start the guest demo" message={guestError} onRetry={retryGuest} onBack={leaveDemo} />
   if (!auth.ready || (route.demo && auth.enabled && !auth.session)) return route.demo ? <Splash onRetry={retryGuest} onBack={leaveDemo} /> : <Splash />
