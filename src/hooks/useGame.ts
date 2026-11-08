@@ -31,8 +31,9 @@ export function useGame(backend: Backend | null, demo: boolean, events: GameEven
   const levelRef = useRef<number | null>(null)
   const seen = useRef<Set<string> | null>(null)
   const demoRef = useRef(demo)
-  // events and demo change every render. I keep them in refs so the load
-  // effect doesn't restart and wipe the snapshot just because a callback identity changed.
+  // The events object is new every render. I keep it, and the demo flag, in
+  // refs so the load effect doesn't restart and wipe the snapshot just because
+  // a callback identity changed.
   useLayoutEffect(() => {
     ev.current = events
     demoRef.current = demo

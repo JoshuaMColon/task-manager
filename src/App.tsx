@@ -40,10 +40,11 @@ function Shell() {
   // Latched from the first URL. After the save loads I replace /demo with /,
   // and this flag is what still tells a remounted game to call startDemo.
   const [demo] = useState(route.demo)
-  // Latch for this /demo visit. `auth` is a new object every render, so the
-  // effect re-runs constantly. Without the latch I'd sign out the guest I just
-  // created and start another one, orphaning the save. Leaving /demo clears it,
-  // so a second "Play as guest" after sign-out gets a fresh anonymous user.
+  // Latch for this /demo visit. `auth` is a new object every render, so this
+  // effect re-runs whenever the shell renders. Without the latch I'd sign out
+  // the guest I just created and start another one, orphaning the save.
+  // Leaving /demo clears it, so a second "Play as guest" after sign-out gets
+  // a fresh anonymous user.
   const guestStarted = useRef(false)
   const [guestError, setGuestError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
