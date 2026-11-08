@@ -2,6 +2,10 @@
 -- dashboard-only setting), so, like the weather app, it is exposed through thin
 -- security_invoker views: the caller's RLS policies on xplan.* apply and the views add
 -- no privileges. Writes through the views still fire the xplan.tasks triggers.
+--
+-- security_invoker is the whole point. A definer view would run as the owner and
+-- skip RLS, and then these would be a hole instead of a doorway. I grant the
+-- views to authenticated and not to anon, so a request with no session gets nothing.
 create view public.xplan_tasks with (security_invoker = true) as
   select id, user_id, title, notes, priority, due_date, due_time, recurrence, recur_interval,
          project_id, tags, status, completed_at, xp_awarded, on_time, spawned_from, created_at, updated_at
@@ -23,7 +27,11 @@ grant select, insert, update, delete on public.xplan_tasks, public.xplan_project
 grant select on public.xplan_achievements to authenticated;
 grant all on public.xplan_tasks, public.xplan_projects, public.xplan_profiles, public.xplan_achievements to service_role;
 
--- Create (or refresh the time zone of) the caller's player profile.
+-- Create the caller's profile, or refresh their time zone on a later sign-in.
+-- Invoker, not definer: the insert has to pass "Players add own profile", so
+-- user_id is auth.uid() and the policy checks it. on conflict touches time_zone
+-- only — a name the player set must survive the next bootstrap.
+-- (The friendly-name migration replaces this body. Same conflict rule.)
 create or replace function public.xplan_bootstrap(tz text, name text default 'Player')
 returns setof public.xplan_profiles
 language plpgsql security invoker set search_path = '' as $$
@@ -36,6 +44,9 @@ begin
 end $$;
 
 -- Player stats, computed in the database from the XP ledger and completed quests.
+-- Definer so the aggregation can read xplan.tasks and xplan.xp_events directly.
+-- The client never passes a user id: uid is auth.uid(), and every query filters on it.
+-- days is clamped so a caller can't ask for an unbounded heatmap.
 create or replace function public.xplan_stats(days integer default 182)
 returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
@@ -87,6 +98,12 @@ end $$;
 
 -- /demo: give an anonymous guest a lived-in save file (history, streak, quests for today),
 -- parked a few XP short of the next level so their first completion levels them up.
+--
+-- This has to be security definer. It inserts completed quests with xp_awarded set
+-- and writes the XP ledger, which authenticated cannot do. guard_task treats the
+-- owner as trusted and leaves those columns alone; a normal client insert would
+-- be forced back to status open and xp 0. The JWT check is what keeps a real
+-- account from calling this and seeding itself.
 create or replace function public.xplan_start_demo(tz text)
 returns void
 language plpgsql security definer set search_path = '' as $$
@@ -100,12 +117,15 @@ declare
   d integer; k integer; n integer; pr smallint; ts timestamptz; ot boolean; gained integer; tid uuid;
   total integer; lvl integer; target integer;
 begin
+  -- is_anonymous comes from the auth JWT, not from an argument the client can set.
   if uid is null or coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) is false then
     raise exception 'The demo save file is for guest sessions only' using errcode = '42501';
   end if;
   insert into xplan.profiles (user_id, display_name, avatar, skin, time_zone)
   values (uid, 'Guest Player', 'sword', 'forge', coalesce(nullif(tz, ''), 'UTC'))
   on conflict (user_id) do update set time_zone = excluded.time_zone;
+  -- Idempotent. A refresh, or a second /demo visit with the same guest, must not
+  -- stack another copy of the history on top of the first.
   if exists (select 1 from xplan.tasks where user_id = uid) then return; end if;
   today := (now() at time zone xplan.user_tz(uid))::date;
   tz := xplan.user_tz(uid);
