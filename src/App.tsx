@@ -196,6 +196,8 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
   const [custom, setCustom] = useState(false)
 
   const project = view === 'project' ? projects.find((p) => p.id === projectId) : undefined
+  // groupsFor is the view. `flat` is that same list in keyboard order, so j/k
+  // walks what is actually on screen, including overdue rows sitting above today.
   const groups = useMemo(() => groupsFor(view, tasks, today, projectId), [view, tasks, today, projectId])
   const flat = useMemo(() => groups.flatMap((g) => g.tasks), [groups])
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
@@ -254,7 +256,8 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
     [actions, fb],
   )
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts. Ignored while typing or a dialog is open, so a quest
+  // title can contain "x" without completing something.
   const gPending = useRef(false)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -286,6 +289,7 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
       }
       switch (e.key) {
         case 'g':
+          // "g" then a letter, vim-style. The latch expires so a stray g doesn't eat the next key.
           gPending.current = true
           setTimeout(() => (gPending.current = false), 1200)
           break
@@ -338,6 +342,7 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
         case '2':
         case '3':
         case '4':
+          // Keys 1-4 are the P-labels (P1 is urgent). The column stores 4..1, so I flip it.
           if (sel) actions.update(sel.id, { priority: (5 - Number(e.key)) as Priority })
           break
         case 'Escape':
@@ -372,6 +377,8 @@ function GameUI({ snap, actions, view, projectId, go, mode, guest, onSignOut }: 
 
   const meta = TITLES[view]
   const Icon = meta.icon
+  // Today pre-fills a due date; a project view pre-fills that project.
+  // The quick-add parser still wins when the sentence names its own date or @project.
   const quickDefaults = view === 'today' ? { due_date: today } : view === 'project' ? { project_id: projectId ?? null } : undefined
   const list = (gs: Group[], opts?: { showDate?: (g: Group) => boolean }) =>
     gs.map((g) => (
