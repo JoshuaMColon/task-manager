@@ -10,6 +10,9 @@ export interface Route {
 const PATHS: Record<string, ViewId> = { '/': 'hq', '/today': 'today', '/upcoming': 'upcoming', '/inbox': 'inbox', '/overdue': 'overdue', '/log': 'log', '/trophies': 'trophies' }
 export const PATH_OF: Record<Exclude<ViewId, 'project'>, string> = { hq: '/', today: '/today', upcoming: '/upcoming', inbox: '/inbox', overdue: '/overdue', log: '/log', trophies: '/trophies' }
 
+// No router dependency. The path lives in history and I listen for popstate
+// so back and forward work on a static host. /demo is not a view — it's a
+// flag the shell reads to start a guest, then replaces with / once the save loads.
 export function parsePath(path: string): Route {
   const p = path.replace(/\/+$/, '') || '/'
   if (p === '/demo') return { view: 'hq', demo: true }
@@ -26,6 +29,9 @@ const subscribe = (cb: () => void) => {
 export function navigate(path: string, replace = false) {
   if (path === window.location.pathname) return
   window.history[replace ? 'replaceState' : 'pushState'](null, '', path)
+  // pushState doesn't fire popstate. I dispatch one so useSyncExternalStore
+  // re-reads the path. replace is used for /demo -> / so that redirect isn't
+  // a history entry the back button returns to.
   window.dispatchEvent(new PopStateEvent('popstate'))
 }
 
